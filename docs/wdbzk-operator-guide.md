@@ -20,6 +20,7 @@ Wallpaper Studio 面向 wdbzk 壁纸站运营：自动下载壁纸 → 百度分
 ## 3. 一键发布
 
 - 发布前检查全部通过后再点「开始发布」
+- **下一条壁纸预览 / 去重预检**：full 模式下会 dry-run 预览候选并检查 wallpaper.wdbzk.com 是否重复
 - 若 wallpaper.wdbzk.com 已有类似标题，默认会跳过该壁纸（可在设置关闭「重复时中止」）
 - panapi 若提示链接已存在，会跳过 B 站投稿，避免重复视频
 - 成功后显示分享链接与 wdbzk 入库信息

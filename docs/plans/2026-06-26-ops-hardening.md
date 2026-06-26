@@ -30,11 +30,13 @@
 
 ## Wave 3 — 后续（计划内，下轮）
 
-- [ ] 下载前去重 dry-run（preflight `duplicate` 步骤）
-- [ ] History 页断点续传 / 放弃 UI
-- [ ] CI 增加 `npm run build`
-- [ ] 百度应用内登录调研
-- [ ] 应用图标 + 代码签名
+- [x] 下载前去重 dry-run（preflight `duplicate` / `nextItem` 步骤）
+- [x] History 页断点续传 / 放弃 UI
+- [x] Publish 页断点续传横幅
+- [x] CI 增加 `npm run build`
+- [x] 百度登录引导（终端流程说明 + Accounts 步骤）
+- [x] 应用图标 + 代码签名文档（`docs/packaging.md`）
+- [x] Onboarding 禁止跳步、Dashboard 统一 preflight、默认启用 6 壁纸源
 
 ---
 

@@ -128,6 +128,8 @@ export interface PreflightStep {
     | 'disk'
     | 'downloadSource'
     | 'catalog'
+    | 'nextItem'
+    | 'duplicate'
   label: string
   ok: boolean
   message: string
@@ -172,6 +174,8 @@ export interface WallpaperStudioAPI {
   accountsBilibiliStopLogin: () => Promise<{ ok: boolean }>
   panControlTest: () => Promise<{ ok: boolean; message: string }>
   historyList: () => Promise<HistoryRecord[]>
+  historyResumable: () => Promise<HistoryRecord | null>
+  historyAbandon: (id: string, deleteLocal?: boolean) => Promise<{ ok: boolean; record?: HistoryRecord }>
   openExternal: (url: string) => Promise<void>
   queueStart: () => Promise<{ ok: boolean; message: string }>
   queueStop: () => Promise<{ ok: boolean; message: string }>

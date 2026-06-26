@@ -1,5 +1,6 @@
 interface OnboardingStepperProps {
   currentStep: number
+  maxAllowedStep?: number
   onStepClick?: (step: number) => void
 }
 
@@ -12,6 +13,7 @@ const STEPS = [
 
 export function OnboardingStepper({
   currentStep,
+  maxAllowedStep = 4,
   onStepClick
 }: OnboardingStepperProps): React.JSX.Element {
   return (
@@ -19,18 +21,21 @@ export function OnboardingStepper({
       {STEPS.map((step) => {
         const active = step.id === currentStep
         const done = step.id < currentStep
+        const locked = step.id > maxAllowedStep
         return (
           <li key={step.id}>
             <button
               type="button"
-              disabled={!onStepClick}
+              disabled={!onStepClick || locked}
               onClick={() => onStepClick?.(step.id)}
               className={`rounded-xl border px-4 py-3 text-left transition ${
-                active
-                  ? 'border-accent/40 bg-accent/10 text-accent'
-                  : done
-                    ? 'border-accent/20 bg-accent/5 text-white/75'
-                    : 'border-white/8 bg-white/5 text-white/40'
+                locked
+                  ? 'cursor-not-allowed border-white/5 bg-black/20 text-white/25'
+                  : active
+                    ? 'border-accent/40 bg-accent/10 text-accent'
+                    : done
+                      ? 'border-accent/20 bg-accent/5 text-white/75'
+                      : 'border-white/8 bg-white/5 text-white/40'
               }`}
             >
               <p className="text-xs uppercase tracking-[0.16em] opacity-70">Step {step.id}</p>

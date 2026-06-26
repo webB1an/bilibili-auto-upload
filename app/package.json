@@ -38,6 +38,7 @@
   "build": {
     "appId": "com.wallpaperstudio.app",
     "productName": "Wallpaper Studio",
+    "icon": "build/icon.png",
     "directories": {
       "output": "release"
     },

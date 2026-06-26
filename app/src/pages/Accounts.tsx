@@ -147,6 +147,14 @@ export function Accounts(): React.JSX.Element {
         <Card title="百度网盘" subtitle={`CLI: ${config?.baidu.bdpanPath ?? 'bdpan'}`}>
           <div className="space-y-4">
             <StatusBadge ok={!!baiduAccount?.ok} label={baiduLabel} detail={baiduAccount?.message} />
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-white/45">
+              <li>点击「安装 bdpan」（首次使用）</li>
+              <li>点击「打开终端登录」，在新窗口扫码授权</li>
+              <li>回到本页点击「检测登录状态」</li>
+            </ol>
+            <p className="text-xs text-white/35">
+              分享功能需在百度开放平台开通；详见 docs/packaging.md
+            </p>
             <div className="flex flex-wrap gap-3">
               <Button
                 disabled={installingBdpan}

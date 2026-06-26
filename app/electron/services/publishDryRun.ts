@@ -3,7 +3,9 @@ import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import type { AppConfig } from '../../src/types'
-import { resolveScriptsBase } from './download'
+import { resolveScriptsBase, peekNextWallpaper } from './download'
+import { findCatalogDuplicate } from './wallpaperCatalog'
+import { buildTitle, translateToChinese } from './title'
 
 const MIN_FREE_BYTES = 500 * 1024 * 1024
 
@@ -91,4 +93,39 @@ export function checkDownloadSources(config: AppConfig): { ok: boolean; message:
   }
 
   return { ok: true, message: `壁纸源就绪: ${available.join(', ')}` }
+}
+
+export async function checkNextPublishPreview(config: AppConfig): Promise<{
+  ok: boolean
+  nextTitle?: string
+  duplicate: boolean
+  message: string
+}> {
+  const peek = await peekNextWallpaper(config)
+  if (!peek) {
+    return { ok: false, duplicate: false, message: '暂无新壁纸可预览（各源 dry-run 无候选）' }
+  }
+
+  const chinese = await translateToChinese(peek.name)
+  const resourceTitle = buildTitle(peek.name, chinese)
+  const duplicateResult = await findCatalogDuplicate(resourceTitle, { keyword: peek.name })
+
+  if (duplicateResult.duplicate) {
+    const block = config.pipeline.abortOnCatalogDuplicate
+    return {
+      ok: !block,
+      nextTitle: resourceTitle,
+      duplicate: true,
+      message: block
+        ? duplicateResult.message
+        : `${duplicateResult.message}（已关闭重复中止，发布时将跳过）`
+    }
+  }
+
+  return {
+    ok: true,
+    nextTitle: resourceTitle,
+    duplicate: false,
+    message: `下一条: ${resourceTitle}（${peek.source}）`
+  }
 }

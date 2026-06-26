@@ -17,7 +17,7 @@ import {
   startBilibiliLoginBackground,
   stopBilibiliLoginProcess
 } from './services/bilibiliLogin'
-import { listHistory } from './services/state'
+import { listHistory, findResumablePipelineJob, abandonHistoryRecord } from './services/state'
 import {
   getQueueRuntimeState,
   isQueueRunning,
@@ -88,8 +88,9 @@ function createWindow(): void {
 }
 
 function createTray(): void {
-  const icon = nativeImage.createEmpty()
-  tray = new Tray(icon)
+  const iconPath = path.join(app.getAppPath(), 'build', 'icon.png')
+  const icon = nativeImage.createFromPath(iconPath)
+  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
   tray.setToolTip('Wallpaper Studio')
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -241,6 +242,13 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('history:list', async () => listHistory())
+
+  ipcMain.handle('history:resumable', async () => findResumablePipelineJob())
+
+  ipcMain.handle('history:abandon', async (_event, id: string, deleteLocal?: boolean) => {
+    const record = abandonHistoryRecord(id, deleteLocal ?? false)
+    return { ok: !!record, record }
+  })
 
   ipcMain.handle('shell:openExternal', async (_event, url: string) => {
     await shell.openExternal(url)

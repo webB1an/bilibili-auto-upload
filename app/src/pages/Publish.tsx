@@ -9,11 +9,13 @@ import { useBootstrap, usePipeline } from '@/hooks/usePipeline'
 import { PreflightPanel } from '@/components/PreflightPanel'
 import { usePreflight } from '@/hooks/usePreflight'
 import { useAppStore } from '@/store/appStore'
+import { ResumableJobBanner } from '@/components/ResumableJobBanner'
 import { Link } from 'react-router-dom'
+import { getWallpaperStudio } from '@/lib/bridge'
 
 export function Publish(): React.JSX.Element {
   useBootstrap()
-  const { progress, logs, history, publishSummary } = useAppStore()
+  const { progress, logs, history, publishSummary, setHistory } = useAppStore()
   const { running, run, cancel } = usePipeline()
   const { ready, loading: preflightLoading } = usePreflight(true, 'full')
 
@@ -60,6 +62,19 @@ export function Publish(): React.JSX.Element {
           发布环境尚未就绪。请先到{' '}
           <Link to="/onboarding" className="underline">首次设置</Link> 完成安装与登录。
         </p>
+      )}
+
+      {!running && (
+        <div className="mb-5">
+          <ResumableJobBanner
+            onContinue={() => void run()}
+            onAbandoned={() => {
+              void getWallpaperStudio()
+                .historyList()
+                .then(setHistory)
+            }}
+          />
+        </div>
       )}
 
       <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">

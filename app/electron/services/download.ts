@@ -103,6 +103,61 @@ interface ManifestItem {
   record?: { status?: string; filePath?: string; detailUrl?: string; name?: string }
 }
 
+export interface WallpaperPeek {
+  name: string
+  detailUrl: string
+  source: string
+}
+
+function parseDryRunItem(item: ManifestItem, source: string): WallpaperPeek | null {
+  if (item.status !== 'dry-run') return null
+  const detailUrl = item.detailUrl || ''
+  const rawName = item.name || 'wallpaper'
+  const name = normalizeWallpaperName(rawName)
+  if (!name) return null
+  if (detailUrl && isDetailUrlPosted(detailUrl)) return null
+  return { name, detailUrl, source }
+}
+
+function parseDryRunManifest(source: string, base: string): WallpaperPeek | null {
+  const manifestName = MANIFEST_NAMES[source] ?? `manifest-${source}.json`
+  const manifestPath = path.join(base, 'config', manifestName)
+  if (!fs.existsSync(manifestPath)) return null
+
+  try {
+    const items = JSON.parse(fs.readFileSync(manifestPath, 'utf-8')) as ManifestItem[]
+    for (const item of items) {
+      const peek = parseDryRunItem(item, source)
+      if (peek) return peek
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
+/** 不下载文件，dry-run 预览下一条壁纸候选 */
+export async function peekNextWallpaper(config: AppConfig): Promise<WallpaperPeek | null> {
+  const base = resolveScriptsBase(config)
+  const scriptsDir = path.join(base, 'scripts')
+  const silentLog = () => undefined
+
+  for (const source of config.download.sources) {
+    const scriptName = SOURCE_SCRIPTS[source]
+    if (!scriptName) continue
+    const scriptPath = path.join(scriptsDir, scriptName)
+    if (!fs.existsSync(scriptPath)) continue
+
+    const result = await runNodeScript(scriptPath, ['--dry-run', '--limit', '1'], silentLog)
+    if (!result.ok) continue
+
+    const peek = parseDryRunManifest(source, base)
+    if (peek) return peek
+  }
+
+  return null
+}
+
 function parseManifestItem(item: ManifestItem, source: string, base: string): DownloadResult | null {
   const topStatus = item.status ?? ''
   const recordStatus = item.record?.status ?? ''

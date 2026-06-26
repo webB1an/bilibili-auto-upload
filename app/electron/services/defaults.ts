@@ -27,7 +27,14 @@ export function getDefaultConfig(): AppConfig {
 来源：{detailUrl}`
     },
     download: {
-      sources: ['wallpaperwaifu', 'moewalls'],
+      sources: [
+        'wallpaperwaifu',
+        'moewalls',
+        'desktophut',
+        'motionbgs',
+        'wallsflow',
+        'wallpaperwaves'
+      ],
       scriptsDir: 'auto'
     },
     pipeline: {

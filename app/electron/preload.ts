@@ -49,6 +49,11 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
   onboardingComplete: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('onboarding:complete'),
   panControlTest: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('panControl:test'),
   historyList: (): Promise<HistoryRecord[]> => ipcRenderer.invoke('history:list'),
+  historyResumable: (): Promise<HistoryRecord | null> => ipcRenderer.invoke('history:resumable'),
+  historyAbandon: (
+    id: string,
+    deleteLocal?: boolean
+  ): Promise<{ ok: boolean; record?: HistoryRecord }> => ipcRenderer.invoke('history:abandon', id, deleteLocal),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
   queueStart: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('queue:start'),
   queueStop: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('queue:stop'),

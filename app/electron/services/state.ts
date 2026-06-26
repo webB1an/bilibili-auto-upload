@@ -82,10 +82,36 @@ export function listHistory(): HistoryRecord[] {
 export function findResumablePipelineJob(): HistoryRecord | null {
   for (const record of loadState().history) {
     if (record.status === 'success' || record.bilibiliStatus === 'success') continue
+    if (record.error === '已放弃续传') continue
     if (!record.localPath || !fs.existsSync(record.localPath)) continue
     return record
   }
   return null
+}
+
+export function abandonHistoryRecord(id: string, deleteLocal = false): HistoryRecord | null {
+  const state = loadState()
+  const index = state.history.findIndex((item) => item.id === id)
+  if (index < 0) return null
+
+  const record = state.history[index]
+  if (deleteLocal && record.localPath && fs.existsSync(record.localPath)) {
+    try {
+      fs.unlinkSync(record.localPath)
+    } catch {
+      // ignore
+    }
+  }
+
+  state.history[index] = {
+    ...record,
+    status: 'failed',
+    bilibiliStatus: 'failed',
+    error: '已放弃续传',
+    bilibiliMessage: '已放弃续传'
+  }
+  saveState(state)
+  return state.history[index]
 }
 
 export function getTodayStats(): { published: number; failed: number; partial: number } {

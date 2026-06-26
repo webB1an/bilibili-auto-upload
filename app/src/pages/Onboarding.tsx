@@ -91,7 +91,11 @@ export function Onboarding(): React.JSX.Element {
         </p>
       </header>
 
-      <OnboardingStepper currentStep={currentStep} onStepClick={setManualStep} />
+      <OnboardingStepper
+        currentStep={currentStep}
+        maxAllowedStep={autoStep}
+        onStepClick={(step) => setManualStep(step)}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">

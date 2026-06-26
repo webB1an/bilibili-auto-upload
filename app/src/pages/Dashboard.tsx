@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { StatusBadge } from '@/components/StatusBadge'
+import { PreflightPanel } from '@/components/PreflightPanel'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useBootstrap, usePipeline } from '@/hooks/usePipeline'
@@ -9,7 +9,7 @@ import { useAppStore } from '@/store/appStore'
 
 export function Dashboard(): React.JSX.Element {
   useBootstrap()
-  const { deps, history } = useAppStore()
+  const { history } = useAppStore()
   const { running, run } = usePipeline()
   const { ready, loading: preflightLoading } = usePreflight(true, 'full')
 
@@ -55,19 +55,14 @@ export function Dashboard(): React.JSX.Element {
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <Card title="依赖检测" subtitle="发布前请确保全部就绪">
-          <div className="grid gap-3">
-            <StatusBadge ok={!!deps?.node.ok} label="内置 Node" detail={deps?.node.version || deps?.node.message} />
-            <StatusBadge ok={!!deps?.curl.ok} label="curl" detail={deps?.curl.message} />
-            <StatusBadge ok={!!deps?.python.ok} label="Python" detail={deps?.python.version || deps?.python.message} />
-            <StatusBadge ok={!!deps?.bdpan.ok} label="百度网盘 bdpan" detail={deps?.bdpan.message} />
-            <StatusBadge ok={!!deps?.sau.ok} label="B 站 CLI" detail={deps?.sau.message} />
-          </div>
-        </Card>
+        <PreflightPanel mode="full" title="发布就绪检查" />
         <Card title="快捷入口">
           <div className="flex flex-wrap gap-3">
             <Link to="/publish">
               <Button variant="secondary">打开发布页</Button>
+            </Link>
+            <Link to="/queue">
+              <Button variant="secondary">发布队列</Button>
             </Link>
             <Link to="/accounts">
               <Button variant="secondary">账号与工具</Button>

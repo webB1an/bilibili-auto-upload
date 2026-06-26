@@ -6,7 +6,7 @@ import { ensureBdpanInstalled } from './bdpanRuntime'
 import { ensureBilibiliCliInstalled } from './bilibiliRuntime'
 import { detectPython, ensurePythonRequests } from './pythonRuntime'
 import { testPanControlConnection } from './panControl'
-import { checkDiskSpace, checkDownloadSources } from './publishDryRun'
+import { checkDiskSpace, checkDownloadSources, checkNextPublishPreview } from './publishDryRun'
 import { testWallpaperCatalogConnection } from './wallpaperCatalog'
 
 export type PreflightStepId =
@@ -20,6 +20,8 @@ export type PreflightStepId =
   | 'disk'
   | 'downloadSource'
   | 'catalog'
+  | 'nextItem'
+  | 'duplicate'
 
 export interface PreflightStep {
   id: PreflightStepId
@@ -157,23 +159,43 @@ export async function runPreflight(
       ok: catalog.ok,
       message: catalog.message
     })
+
+    const preview = await checkNextPublishPreview(config)
+    steps.push({
+      id: 'nextItem',
+      label: '下一条壁纸预览',
+      ok: preview.ok || preview.duplicate,
+      message: preview.message
+    })
+    steps.push({
+      id: 'duplicate',
+      label: '下一条去重预检',
+      ok: preview.ok,
+      message: preview.duplicate
+        ? preview.message
+        : preview.nextTitle
+          ? '库内未发现重复'
+          : '无法预检'
+    })
   }
 
-  const requiredIds: PreflightStepId[] =
-    mode === 'full'
-      ? [
-          'bdpan',
-          'bilibiliCli',
-          'python',
-          'pythonRequests',
-          'baidu',
-          'bilibili',
-          'wdbzk',
-          'disk',
-          'downloadSource'
-        ]
-      : ['bdpan', 'bilibiliCli', 'python', 'pythonRequests', 'baidu', 'bilibili', 'wdbzk']
-
+  const requiredIds = getRequiredPreflightIds(mode)
   const ready = requiredIds.every((id) => steps.find((step) => step.id === id)?.ok)
   return { ready, steps, deps, mode }
+}
+
+export function getRequiredPreflightIds(mode: 'quick' | 'full'): PreflightStepId[] {
+  return mode === 'full'
+    ? [
+        'bdpan',
+        'bilibiliCli',
+        'python',
+        'pythonRequests',
+        'baidu',
+        'bilibili',
+        'wdbzk',
+        'disk',
+        'downloadSource'
+      ]
+    : ['bdpan', 'bilibiliCli', 'python', 'pythonRequests', 'baidu', 'bilibili', 'wdbzk']
 }
