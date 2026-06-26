@@ -5,7 +5,7 @@ const STEPS: Array<{ id: PipelineStepId; label: string }> = [
   { id: 'translate', label: '生成标题' },
   { id: 'baiduUpload', label: '上传百度' },
   { id: 'baiduShare', label: '创建分享' },
-  { id: 'panControl', label: 'pan-control' },
+  { id: 'panControl', label: 'wdbzk 入库' },
   { id: 'bilibili', label: 'B 站投稿' }
 ]
 

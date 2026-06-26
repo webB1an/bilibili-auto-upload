@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
     ipcRenderer.invoke('accounts:baiduInstall'),
   accountsBaiduOpenLoginTerminal: (): Promise<{ ok: boolean; message: string }> =>
     ipcRenderer.invoke('accounts:baiduOpenLoginTerminal'),
-  pipelineRun: (): Promise<{ ok: boolean; message: string; recordId?: string }> =>
+  pipelineRun: (): Promise<{ ok: boolean; message: string; recordId?: string; skipped?: boolean }> =>
     ipcRenderer.invoke('pipeline:run'),
   pipelineCancel: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('pipeline:cancel'),
   preflightRun: (mode?: 'quick' | 'full'): Promise<PreflightResult> =>

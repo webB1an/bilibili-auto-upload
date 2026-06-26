@@ -67,7 +67,7 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
       ? { ok: true, version: python.stdout }
       : { ok: false, message: '未找到 Python，请安装 Python 3.10+' },
     bdpan: !bdpanInstalled
-      ? { ok: false, message: `未安装 bdpan，请在「账号授权」页点击「安装 bdpan」（将安装到 ${getManagedBdpanPath()}）` }
+      ? { ok: false, message: `未安装 bdpan，请在「账号与工具」页点击「安装 bdpan」（将安装到 ${getManagedBdpanPath()}）` }
       : bdpan.ok && `${bdpan.stdout}\n${bdpan.stderr}`.includes('已登录')
         ? { ok: true, message: bdpan.stdout.split('\n').find((line) => line.includes('已登录')) || '已登录' }
         : { ok: false, message: bdpan.stderr || bdpan.stdout || 'bdpan 未登录' },

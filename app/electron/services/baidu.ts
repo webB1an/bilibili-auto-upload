@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import type { AppConfig, ShareResult } from '../../src/types'
 import { ensureBdpanInstalled, isBdpanLoggedIn, resolveBdpanPath } from './bdpanRuntime'
+import { registerProcess } from './processRegistry'
 
 function runBdpan(
   config: AppConfig,
@@ -15,6 +16,7 @@ function runBdpan(
       windowsHide: true,
       shell: false
     })
+    registerProcess(child)
     let stdout = ''
     let stderr = ''
     const timer = setTimeout(() => {

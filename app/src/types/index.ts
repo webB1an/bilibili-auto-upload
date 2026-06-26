@@ -159,7 +159,7 @@ export interface WallpaperStudioAPI {
   accountsBaiduWhoami: () => Promise<{ ok: boolean; message: string }>
   accountsBaiduInstall: () => Promise<{ ok: boolean; message: string; path?: string }>
   accountsBaiduOpenLoginTerminal: () => Promise<{ ok: boolean; message: string }>
-  pipelineRun: () => Promise<{ ok: boolean; message: string; recordId?: string }>
+  pipelineRun: () => Promise<{ ok: boolean; message: string; recordId?: string; skipped?: boolean }>
   pipelineCancel: () => Promise<{ ok: boolean }>
   preflightRun: (mode?: 'quick' | 'full') => Promise<PreflightResult>
   shellOpenPath: (targetPath: string) => Promise<{ ok: boolean; message: string }>

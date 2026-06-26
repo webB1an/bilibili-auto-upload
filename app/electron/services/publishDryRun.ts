@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process'
 import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
@@ -6,16 +7,40 @@ import { resolveScriptsBase } from './download'
 
 const MIN_FREE_BYTES = 500 * 1024 * 1024
 
+function getWindowsFreeBytes(targetPath: string): number | null {
+  try {
+    const driveLetter = path.parse(path.resolve(targetPath)).root.replace(/[:\\]/g, '')
+    if (!driveLetter) return null
+    const output = execFileSync(
+      'powershell',
+      ['-NoProfile', '-Command', `(Get-PSDrive -Name '${driveLetter}').Free`],
+      { encoding: 'utf8', windowsHide: true }
+    )
+    const free = Number.parseInt(output.trim(), 10)
+    return Number.isFinite(free) ? free : null
+  } catch {
+    return null
+  }
+}
+
 function getFreeBytes(targetPath: string): number | null {
   try {
     fs.mkdirSync(targetPath, { recursive: true })
-    // Node 18+ on Windows may not support statfs everywhere; fallback to writable check
+
+    if (process.platform === 'win32') {
+      const windowsFree = getWindowsFreeBytes(targetPath)
+      if (windowsFree != null) {
+        return windowsFree
+      }
+    }
+
     if (typeof fs.statfsSync === 'function') {
       const stat = fs.statfsSync(targetPath)
       return stat.bfree * stat.bsize
     }
+
     fs.accessSync(targetPath, fs.constants.W_OK)
-    return MIN_FREE_BYTES
+    return null
   } catch {
     return null
   }
@@ -27,11 +52,13 @@ export function checkDiskSpace(config: AppConfig): { ok: boolean; message: strin
   const userFree = getFreeBytes(userData)
   const downloadFree = getFreeBytes(downloadsDir)
 
-  if (userFree == null || downloadFree == null) {
-    return { ok: false, message: '无法检测磁盘写入权限，请确认安装目录可写' }
+  if (userFree == null && downloadFree == null) {
+    return { ok: false, message: '无法检测磁盘空间，请确认安装目录可写' }
   }
 
-  const free = Math.min(userFree, downloadFree)
+  const freeValues = [userFree, downloadFree].filter((value): value is number => value != null)
+  const free = Math.min(...freeValues)
+
   if (free < MIN_FREE_BYTES) {
     return {
       ok: false,

@@ -42,8 +42,12 @@ export function markDetailUrlPosted(detailUrl: string): void {
   const state = loadState()
   if (!state.postedDetailUrls.includes(detailUrl)) {
     state.postedDetailUrls.push(detailUrl)
-    saveState(state)
   }
+  const MAX_POSTED_URLS = 2000
+  if (state.postedDetailUrls.length > MAX_POSTED_URLS) {
+    state.postedDetailUrls = state.postedDetailUrls.slice(-MAX_POSTED_URLS)
+  }
+  saveState(state)
 }
 
 export function addHistoryRecord(record: Omit<HistoryRecord, 'id' | 'createdAt'>): HistoryRecord {

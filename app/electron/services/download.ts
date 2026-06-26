@@ -4,6 +4,7 @@ import path from 'path'
 import { spawn } from 'child_process'
 import type { AppConfig, DownloadResult } from '../../src/types'
 import { getNodeSpawnEnv, resolveNodeExecutable } from './nodeRuntime'
+import { registerProcess } from './processRegistry'
 import { isDetailUrlPosted } from './state'
 import { normalizeWallpaperName } from './title'
 
@@ -66,6 +67,7 @@ function runNodeScript(
       windowsHide: true,
       shell: false
     })
+    registerProcess(child)
     let output = ''
     const handleLine = (line: string) => {
       log(`[node] ${line}`)

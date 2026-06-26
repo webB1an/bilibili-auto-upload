@@ -2,6 +2,8 @@ const WALLPAPER_CATALOG_URL = 'https://wallpaper.wdbzk.com/api/wallpaper/resourc
 const TITLE_SEPARATOR = ' · '
 const DYNAMIC_WALLPAPER_SUFFIX = ' 动态壁纸'
 const BILIBILI_PREFIX = '『Wallpaper Engine』动态壁纸推荐'
+const CATALOG_PAGE_SIZE = 100
+const MAX_CATALOG_PAGES = 10
 
 export interface WallpaperCatalogItem {
   id: number
@@ -39,33 +41,69 @@ function linksMatch(existingLink: string, shareLink: string): boolean {
   return a.includes(b) || b.includes(a)
 }
 
+async function fetchCatalogPage(
+  page: number,
+  keyword: string,
+  pageSize: number
+): Promise<{ ok: boolean; items: WallpaperCatalogItem[]; message: string }> {
+  const url = new URL(WALLPAPER_CATALOG_URL)
+  url.searchParams.set('page', String(page))
+  url.searchParams.set('pageSize', String(pageSize))
+  if (keyword.trim()) {
+    url.searchParams.set('keyword', keyword.trim())
+  }
+
+  const response = await fetch(url.toString(), { method: 'GET' })
+  const body = (await response.json()) as {
+    code?: number
+    message?: string
+    data?: { list?: WallpaperCatalogItem[] }
+  }
+
+  if (body.code !== 200) {
+    return { ok: false, items: [], message: body.message || `catalog API 失败 (${response.status})` }
+  }
+
+  return {
+    ok: true,
+    items: body.data?.list ?? [],
+    message: `第 ${page} 页 ${body.data?.list?.length ?? 0} 条`
+  }
+}
+
 export async function fetchWallpaperCatalog(
   keyword = '',
-  pageSize = 100
+  pageSize = CATALOG_PAGE_SIZE
 ): Promise<{ ok: boolean; items: WallpaperCatalogItem[]; message: string }> {
   try {
-    const url = new URL(WALLPAPER_CATALOG_URL)
-    url.searchParams.set('page', '1')
-    url.searchParams.set('pageSize', String(pageSize))
-    if (keyword.trim()) {
-      url.searchParams.set('keyword', keyword.trim())
-    }
+    const items: WallpaperCatalogItem[] = []
+    for (let page = 1; page <= MAX_CATALOG_PAGES; page += 1) {
+      const pageResult = await fetchCatalogPage(page, keyword, pageSize)
+      if (!pageResult.ok) {
+        if (items.length > 0) {
+          return {
+            ok: true,
+            items,
+            message: `已扫描 ${items.length} 条（第 ${page} 页请求失败，使用已获取数据）`
+          }
+        }
+        return pageResult
+      }
 
-    const response = await fetch(url.toString(), { method: 'GET' })
-    const body = (await response.json()) as {
-      code?: number
-      message?: string
-      data?: { list?: WallpaperCatalogItem[] }
-    }
+      if (pageResult.items.length === 0) {
+        break
+      }
 
-    if (body.code !== 200) {
-      return { ok: false, items: [], message: body.message || `catalog API 失败 (${response.status})` }
+      items.push(...pageResult.items)
+      if (pageResult.items.length < pageSize) {
+        break
+      }
     }
 
     return {
       ok: true,
-      items: body.data?.list ?? [],
-      message: `已获取 ${body.data?.list?.length ?? 0} 条库内资源`
+      items,
+      message: `已扫描 ${items.length} 条库内资源（最多 ${MAX_CATALOG_PAGES} 页）`
     }
   } catch (error) {
     return { ok: false, items: [], message: (error as Error).message || '无法连接 wallpaper.wdbzk.com' }

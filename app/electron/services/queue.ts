@@ -89,7 +89,9 @@ async function queueTick(): Promise<void> {
   lastRunAt = new Date().toISOString()
 
   if (result.ok) {
-    lastMessage = result.message || '发布成功'
+    lastMessage = result.skipped
+      ? `已跳过: ${result.message}`
+      : result.message || '发布成功'
   } else {
     lastMessage = result.message || '发布失败'
     if (config.queue.stopOnError) {

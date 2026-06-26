@@ -32,7 +32,7 @@ export async function createPanControlResource(
     return { duplicate: true, message: body.message || '链接已存在' }
   }
 
-  throw new Error(body.message || `pan-control 请求失败 (${response.status})`)
+  throw new Error(body.message || `wdbzk 资源库请求失败 (${response.status})`)
 }
 
 export async function testPanControlConnection(

@@ -23,10 +23,10 @@ import {
   updateHistoryRecord
 } from './state'
 import { findCatalogDuplicate } from './wallpaperCatalog'
+import { clearRegisteredProcesses, killRegisteredProcesses, registerProcess } from './processRegistry'
 
 let running = false
 let cancelled = false
-let activeChildren: Array<{ kill: () => void }> = []
 
 function emitProgress(window: BrowserWindow | null, progress: PipelineProgress): void {
   window?.webContents.send('pipeline:progress', progress)
@@ -38,14 +38,7 @@ function emitLog(window: BrowserWindow | null, line: string): void {
 
 export function cancelPipeline(): void {
   cancelled = true
-  activeChildren.forEach((child) => {
-    try {
-      child.kill()
-    } catch {
-      // ignore
-    }
-  })
-  activeChildren = []
+  killRegisteredProcesses()
 }
 
 export function isPipelineRunning(): boolean {
@@ -67,6 +60,7 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
   ok: boolean
   message: string
   recordId?: string
+  skipped?: boolean
 }> {
   if (running) {
     return { ok: false, message: '已有任务正在运行' }
@@ -136,7 +130,15 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
       const duplicate = await findCatalogDuplicate(resourceTitle)
       log(`去重: ${duplicate.message}`)
       if (duplicate.duplicate && config.pipeline.abortOnCatalogDuplicate) {
-        throw new Error(duplicate.message)
+        if (downloaded.detailUrl) {
+          markDetailUrlPosted(downloaded.detailUrl)
+        }
+        if (config.pipeline.deleteLocalAfterSuccess && fs.existsSync(downloaded.filePath)) {
+          fs.unlinkSync(downloaded.filePath)
+          log(`已删除重复壁纸本地文件: ${downloaded.filePath}`)
+        }
+        progress('translate', 'warning', 100, duplicate.message)
+        return { ok: true, skipped: true, message: duplicate.message }
       }
       if (duplicate.duplicate) {
         progress('translate', 'warning', 100, duplicate.message)
@@ -188,7 +190,7 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
     if (resumable?.panControlId) {
       progress('panControl', 'skipped', 100, `已入库 #${resumable.panControlId}`)
     } else {
-      progress('panControl', 'running', 30, '正在写入 pan-control...')
+      progress('panControl', 'running', 30, '正在写入 wdbzk 资源库...')
       const panDesc = `动态壁纸资源\n来源: ${downloaded.source}\n${downloaded.detailUrl}`
       const panResult = await createPanControlResource(config, {
         name: resourceTitle,
@@ -197,11 +199,21 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
       })
       if (panResult.duplicate) {
         progress('panControl', 'warning', 100, panResult.message)
-        log(`pan-control: ${panResult.message}`)
-      } else {
-        updateHistoryRecord(recordId!, { panControlId: panResult.id })
-        progress('panControl', 'success', 100, `pan-control 入库成功 #${panResult.id ?? ''}`)
+        log(`wdbzk 资源库: ${panResult.message}`)
+        progress('bilibili', 'skipped', 100, '库内已有相同链接，跳过 B 站投稿')
+        updateHistoryRecord(recordId!, {
+          bilibiliStatus: 'skipped',
+          status: 'partial',
+          bilibiliMessage: panResult.message
+        })
+        if (downloaded.detailUrl) {
+          markDetailUrlPosted(downloaded.detailUrl)
+        }
+        return { ok: true, skipped: true, message: panResult.message, recordId }
       }
+
+      updateHistoryRecord(recordId!, { panControlId: panResult.id })
+      progress('panControl', 'success', 100, `wdbzk 入库成功 #${panResult.id ?? ''}`)
     }
 
     progress('bilibili', 'running', 40, '正在投稿 B 站...')
@@ -253,6 +265,6 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
   } finally {
     running = false
     cancelled = false
-    activeChildren = []
+    clearRegisteredProcesses()
   }
 }

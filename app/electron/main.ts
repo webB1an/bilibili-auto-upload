@@ -248,7 +248,13 @@ function registerIpc(): void {
 
   ipcMain.handle('queue:start', async () => startQueue(mainWindow))
 
-  ipcMain.handle('queue:stop', async () => stopQueue())
+  ipcMain.handle('queue:stop', async () => {
+    const result = stopQueue()
+    const config = loadConfig()
+    config.queue.enabled = false
+    saveConfig(config)
+    return result
+  })
 
   ipcMain.handle('queue:status', async () => getQueueRuntimeState())
 

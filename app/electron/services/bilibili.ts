@@ -3,6 +3,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { AppConfig } from '../../src/types'
+import { registerProcess } from './processRegistry'
 
 function resolvePython(): string {
   return process.platform === 'win32' ? 'python' : 'python3'
@@ -60,6 +61,7 @@ function runSau(
       windowsHide: true,
       shell: false
     })
+    registerProcess(child)
 
     let stdout = ''
     let stderr = ''
