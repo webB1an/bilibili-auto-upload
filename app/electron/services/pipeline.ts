@@ -1,0 +1,248 @@
+import fs from 'fs'
+import path from 'path'
+import type { BrowserWindow } from 'electron'
+import type { DownloadResult, HistoryRecord, PipelineProgress, ShareResult } from '../../src/types'
+import { getConfig } from './config'
+import { downloadWallpaper } from './download'
+import { baiduShare, baiduUpload, getRemoteFileName, parseStoredShareLink } from './baidu'
+import { createPanControlResource } from './panControl'
+import { bilibiliUploadVideo } from './bilibili'
+import {
+  buildBilibiliDesc,
+  buildBilibiliTitleWithLimit,
+  buildTitle,
+  extractChineseWallpaperName,
+  normalizeWallpaperName,
+  resourceTitleFromBilibiliTitle,
+  translateToChinese
+} from './title'
+import {
+  addHistoryRecord,
+  findResumablePipelineJob,
+  markDetailUrlPosted,
+  updateHistoryRecord
+} from './state'
+
+let running = false
+let cancelled = false
+let activeChildren: Array<{ kill: () => void }> = []
+
+function emitProgress(window: BrowserWindow | null, progress: PipelineProgress): void {
+  window?.webContents.send('pipeline:progress', progress)
+}
+
+function emitLog(window: BrowserWindow | null, line: string): void {
+  window?.webContents.send('pipeline:log', line)
+}
+
+export function cancelPipeline(): void {
+  cancelled = true
+  activeChildren.forEach((child) => {
+    try {
+      child.kill()
+    } catch {
+      // ignore
+    }
+  })
+  activeChildren = []
+}
+
+export function isPipelineRunning(): boolean {
+  return running
+}
+
+function downloadFromRecord(record: HistoryRecord): DownloadResult {
+  const filePath = record.localPath!
+  const rawName = path.basename(filePath, path.extname(filePath))
+  return {
+    filePath,
+    name: normalizeWallpaperName(rawName),
+    detailUrl: record.detailUrl,
+    source: record.source
+  }
+}
+
+export async function runPipeline(window: BrowserWindow | null): Promise<{
+  ok: boolean
+  message: string
+  recordId?: string
+}> {
+  if (running) {
+    return { ok: false, message: '已有任务正在运行' }
+  }
+
+  running = true
+  cancelled = false
+  const config = getConfig()
+  const log = (line: string) => emitLog(window, line)
+  const isCancelled = () => cancelled
+
+  let recordId: string | undefined
+  let previewTitle: string | undefined
+  let previewPath: string | undefined
+
+  const progress = (
+    step: PipelineProgress['step'],
+    status: PipelineProgress['status'],
+    percent: number,
+    message: string
+  ) => {
+    emitProgress(window, { step, status, percent, message, previewTitle, previewPath })
+  }
+
+  const setPreview = (title?: string, filePath?: string): void => {
+    if (title !== undefined) previewTitle = title
+    if (filePath !== undefined) previewPath = filePath
+  }
+
+  try {
+    const resumable = findResumablePipelineJob()
+    let downloaded: DownloadResult
+    let resourceTitle: string
+    let bilibiliTitle: string
+
+    if (resumable) {
+      downloaded = downloadFromRecord(resumable)
+      recordId = resumable.id
+      resourceTitle = resourceTitleFromBilibiliTitle(resumable.title)
+      bilibiliTitle = buildBilibiliTitleWithLimit(resourceTitle, {
+        chineseName: extractChineseWallpaperName(resourceTitle)
+      })
+      if (bilibiliTitle !== resumable.title) {
+        updateHistoryRecord(recordId, { title: bilibiliTitle })
+      }
+
+      log(`继续上次未完成的发布: ${bilibiliTitle}`)
+      setPreview(bilibiliTitle, downloaded.filePath)
+      progress('download', 'skipped', 100, `复用本地文件: ${path.basename(downloaded.filePath)}`)
+      progress('translate', 'skipped', 100, `复用标题: ${bilibiliTitle}`)
+    } else {
+      progress('download', 'running', 5, '正在下载动态壁纸...')
+      downloaded = await downloadWallpaper(config, log, isCancelled, ({ title }) => {
+        setPreview(title)
+        progress('download', 'running', 5, `正在下载: ${title}`)
+      })
+      setPreview(downloaded.name, downloaded.filePath)
+      progress('download', 'success', 100, `下载完成: ${downloaded.name}`)
+
+      progress('translate', 'running', 10, '正在生成标题...')
+      const chinese = await translateToChinese(downloaded.name)
+      resourceTitle = buildTitle(downloaded.name, chinese)
+      bilibiliTitle = buildBilibiliTitleWithLimit(resourceTitle, { chineseName: chinese })
+      setPreview(bilibiliTitle, downloaded.filePath)
+      progress('translate', 'success', 100, `标题: ${bilibiliTitle}`)
+
+      const record = addHistoryRecord({
+        title: bilibiliTitle,
+        detailUrl: downloaded.detailUrl,
+        source: downloaded.source,
+        localPath: downloaded.filePath,
+        bilibiliStatus: 'pending',
+        status: 'partial'
+      })
+      recordId = record.id
+    }
+
+    const sizeMb = fs.statSync(downloaded.filePath).size / 1024 / 1024
+    if (sizeMb > config.pipeline.maxFileSizeMb) {
+      throw new Error(`文件过大 (${sizeMb.toFixed(1)}MB)，超过限制 ${config.pipeline.maxFileSizeMb}MB`)
+    }
+
+    let remotePath = resumable?.baiduRemotePath
+    let share: ShareResult
+
+    if (resumable?.shareLink) {
+      share = parseStoredShareLink(resumable.shareLink)
+      remotePath = remotePath ?? resumable.baiduRemotePath
+      progress('baiduUpload', 'skipped', 100, `已上传: ${remotePath ?? '（远端路径未知）'}`)
+      progress('baiduShare', 'skipped', 100, '复用已有分享链接')
+    } else if (remotePath) {
+      progress('baiduUpload', 'skipped', 100, `已上传: ${remotePath}`)
+      progress('baiduShare', 'running', 20, '正在创建分享链接...')
+      share = await baiduShare(config, remotePath, log)
+      updateHistoryRecord(recordId!, { shareLink: share.fullLink })
+      progress('baiduShare', 'success', 100, '分享链接已生成')
+    } else {
+      progress('baiduUpload', 'running', 15, '正在上传到百度网盘...')
+      const remoteName = getRemoteFileName(downloaded.filePath)
+      remotePath = await baiduUpload(config, downloaded.filePath, remoteName, log)
+      updateHistoryRecord(recordId!, { baiduRemotePath: remotePath })
+      progress('baiduUpload', 'success', 100, `上传完成: ${remotePath}`)
+
+      progress('baiduShare', 'running', 20, '正在创建分享链接...')
+      share = await baiduShare(config, remotePath, log)
+      updateHistoryRecord(recordId!, { shareLink: share.fullLink })
+      progress('baiduShare', 'success', 100, '分享链接已生成')
+    }
+
+    if (resumable?.panControlId) {
+      progress('panControl', 'skipped', 100, `已入库 #${resumable.panControlId}`)
+    } else {
+      progress('panControl', 'running', 30, '正在写入 pan-control...')
+      const panDesc = `动态壁纸资源\n来源: ${downloaded.source}\n${downloaded.detailUrl}`
+      const panResult = await createPanControlResource(config, {
+        name: resourceTitle,
+        link: share!.fullLink,
+        resourceDescription: panDesc
+      })
+      if (panResult.duplicate) {
+        progress('panControl', 'warning', 100, panResult.message)
+        log(`pan-control: ${panResult.message}`)
+      } else {
+        updateHistoryRecord(recordId!, { panControlId: panResult.id })
+        progress('panControl', 'success', 100, `pan-control 入库成功 #${panResult.id ?? ''}`)
+      }
+    }
+
+    progress('bilibili', 'running', 40, '正在投稿 B 站...')
+    const bilibiliDesc = buildBilibiliDesc(config.bilibili.descTemplate, {
+      title: resourceTitle,
+      bilibiliTitle,
+      shareLink: share!.fullLink,
+      sharePwd: share!.pwd,
+      detailUrl: downloaded.detailUrl,
+      source: downloaded.source
+    })
+    await bilibiliUploadVideo(
+      config,
+      { filePath: downloaded.filePath, title: bilibiliTitle, desc: bilibiliDesc },
+      log
+    )
+    updateHistoryRecord(recordId!, { bilibiliStatus: 'success', status: 'success', error: undefined })
+    progress('bilibili', 'success', 100, 'B 站投稿完成')
+
+    if (downloaded.detailUrl) {
+      markDetailUrlPosted(downloaded.detailUrl)
+    }
+
+    if (config.pipeline.deleteLocalAfterSuccess && fs.existsSync(downloaded.filePath)) {
+      fs.unlinkSync(downloaded.filePath)
+      log(`已删除本地文件: ${downloaded.filePath}`)
+    }
+
+    const message = resumable ? '断点续传完成' : '流水线执行成功'
+    return { ok: true, message, recordId }
+  } catch (error) {
+    const message = (error as Error).message || '流水线失败'
+    log(`错误: ${message}`)
+    if (recordId) {
+      updateHistoryRecord(recordId, {
+        status: 'failed',
+        bilibiliStatus: 'failed',
+        bilibiliMessage: message,
+        error: message
+      })
+    }
+    emitProgress(window, {
+      step: 'bilibili',
+      status: 'error',
+      percent: 0,
+      message
+    })
+    return { ok: false, message, recordId }
+  } finally {
+    running = false
+    cancelled = false
+    activeChildren = []
+  }
+}

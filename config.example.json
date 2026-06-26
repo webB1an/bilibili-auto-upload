@@ -1,0 +1,30 @@
+{
+  "panControl": {
+    "baseUrl": "https://panapi.wdbzk.com",
+    "apiToken": "YOUR_API_TOKEN",
+    "categoryId": 61
+  },
+  "baidu": {
+    "remoteBase": "动态壁纸",
+    "sharePeriodDays": 0,
+    "bdpanPath": "auto"
+  },
+  "bilibili": {
+    "accountName": "creator",
+    "tid": 138,
+    "tags": ["动态壁纸", "Wallpaper Engine", "4K"],
+    "socialAutoUploadPath": "auto",
+    "descTemplate": "{bilibiliTitle}\n\n网盘下载：{shareLink}\n{sharePwdLine}\n\n来源：{detailUrl}"
+  },
+  "download": {
+    "sources": ["wallpaperwaifu"],
+    "scriptsDir": "auto"
+  },
+  "pipeline": {
+    "deleteLocalAfterSuccess": true,
+    "maxFileSizeMb": 300
+  },
+  "onboarding": {
+    "completed": false
+  }
+}

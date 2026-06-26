@@ -1,0 +1,28 @@
+# Dependencies & build
+**/node_modules/
+app/out/
+app/release/
+**/__pycache__/
+*.egg-info/
+*.tsbuildinfo
+
+# Secrets & local state
+**/cookies/
+**/conf.py
+**/qrcode.png
+config.json
+
+# Download artifacts
+app/scripts/wallpaper-download/downloads/*
+!app/scripts/wallpaper-download/downloads/.gitkeep
+app/scripts/wallpaper-download/config/*
+!app/scripts/wallpaper-download/config/.gitkeep
+
+# Research sandboxes (not shipped product)
+_research/
+
+# OS, IDE, agent assets
+.DS_Store
+*.log
+.cursor/
+assets/
