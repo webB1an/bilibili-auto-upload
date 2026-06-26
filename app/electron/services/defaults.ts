@@ -37,6 +37,12 @@ export function getDefaultConfig(): AppConfig {
     },
     onboarding: {
       completed: false
+    },
+    queue: {
+      enabled: false,
+      intervalMinutes: 30,
+      dailyLimit: 10,
+      stopOnError: true
     }
   }
 }
@@ -48,6 +54,7 @@ export function mergeConfig(partial: Partial<AppConfig>, defaults: AppConfig): A
     bilibili: { ...defaults.bilibili, ...partial.bilibili },
     download: { ...defaults.download, ...partial.download },
     pipeline: { ...defaults.pipeline, ...partial.pipeline },
-    onboarding: { ...defaults.onboarding, ...partial.onboarding }
+    onboarding: { ...defaults.onboarding, ...partial.onboarding },
+    queue: { ...defaults.queue, ...partial.queue }
   }
 }

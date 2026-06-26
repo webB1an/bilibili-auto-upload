@@ -28,6 +28,31 @@ export interface AppConfig {
   onboarding: {
     completed: boolean
   }
+  queue: {
+    enabled: boolean
+    intervalMinutes: number
+    dailyLimit: number
+    stopOnError: boolean
+  }
+}
+
+export interface QueueRuntimeState {
+  running: boolean
+  publishedToday: number
+  failedToday: number
+  lastRunAt?: string
+  nextRunAt?: string
+  lastMessage?: string
+}
+
+export interface UpdateStatus {
+  checking: boolean
+  currentVersion: string
+  latestVersion?: string
+  updateAvailable: boolean
+  releaseUrl?: string
+  checkedAt?: string
+  error?: string
 }
 
 export interface DepCheckResult {
@@ -148,6 +173,13 @@ export interface WallpaperStudioAPI {
   panControlTest: () => Promise<{ ok: boolean; message: string }>
   historyList: () => Promise<HistoryRecord[]>
   openExternal: (url: string) => Promise<void>
+  queueStart: () => Promise<{ ok: boolean; message: string }>
+  queueStop: () => Promise<{ ok: boolean; message: string }>
+  queueStatus: () => Promise<QueueRuntimeState>
+  queueUpdateSettings: (settings: AppConfig['queue']) => Promise<AppConfig>
+  updaterGetStatus: () => Promise<UpdateStatus>
+  updaterCheck: (force?: boolean) => Promise<UpdateStatus>
+  onQueueStatus: (callback: (status: QueueRuntimeState) => void) => () => void
   onPipelineProgress: (callback: (progress: PipelineProgress) => void) => () => void
   onPipelineLog: (callback: (line: string) => void) => () => void
 }

@@ -18,6 +18,15 @@ import {
   stopBilibiliLoginProcess
 } from './services/bilibiliLogin'
 import { listHistory } from './services/state'
+import {
+  getQueueRuntimeState,
+  isQueueRunning,
+  setQueueWindow,
+  shutdownQueue,
+  startQueue,
+  stopQueue
+} from './services/queue'
+import { checkForUpdates, getUpdateStatus } from './services/updater'
 import { resolvePreloadPath } from './utils/preloadPath'
 import type { AppConfig } from '../src/types'
 
@@ -48,6 +57,7 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
+    setQueueWindow(mainWindow)
   })
 
   mainWindow.webContents.on('did-finish-load', () => {
@@ -234,6 +244,29 @@ function registerIpc(): void {
   ipcMain.handle('shell:openExternal', async (_event, url: string) => {
     await shell.openExternal(url)
   })
+
+  ipcMain.handle('queue:start', async () => startQueue(mainWindow))
+
+  ipcMain.handle('queue:stop', async () => stopQueue())
+
+  ipcMain.handle('queue:status', async () => getQueueRuntimeState())
+
+  ipcMain.handle('queue:updateSettings', async (_event, settings: AppConfig['queue']) => {
+    const config = loadConfig()
+    config.queue = settings
+    const saved = saveConfig(config)
+    if (saved.queue.enabled && !isQueueRunning()) {
+      startQueue(mainWindow)
+    }
+    if (!saved.queue.enabled && isQueueRunning()) {
+      stopQueue()
+    }
+    return saved
+  })
+
+  ipcMain.handle('updater:getStatus', async () => getUpdateStatus())
+
+  ipcMain.handle('updater:check', async (_event, force?: boolean) => checkForUpdates(force))
 }
 
 app.whenReady().then(async () => {
@@ -251,6 +284,12 @@ app.whenReady().then(async () => {
   createWindow()
   createTray()
 
+  void checkForUpdates(false)
+
+  if (config.queue.enabled) {
+    startQueue(mainWindow)
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -267,6 +306,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  shutdownQueue()
   if (isPipelineRunning()) {
     cancelPipeline()
   }

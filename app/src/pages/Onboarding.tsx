@@ -249,6 +249,21 @@ export function Onboarding(): React.JSX.Element {
           </div>
         </Card>
       </div>
+
+      <p className="mt-6 text-xs text-white/35">
+        运营说明见项目文档{' '}
+        <button
+          type="button"
+          className="text-accent/80 underline"
+          onClick={() =>
+            void getWallpaperStudio().openExternal(
+              'https://github.com/webB1an/bilibili-auto-upload/blob/main/docs/wdbzk-operator-guide.md'
+            )
+          }
+        >
+          wdbzk 运营指南
+        </button>
+      </p>
     </div>
   )
 }

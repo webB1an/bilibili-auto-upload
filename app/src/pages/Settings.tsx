@@ -5,7 +5,8 @@ import { ReadOnlyPath } from '@/components/ReadOnlyPath'
 import { Input, TextArea } from '@/components/ui/Input'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
-import type { AppConfig } from '@/types'
+import type { AppConfig, UpdateStatus } from '@/types'
+import { getWallpaperStudio } from '@/lib/bridge'
 
 export function Settings(): React.JSX.Element {
   useBootstrap()
@@ -13,10 +14,18 @@ export function Settings(): React.JSX.Element {
   const [draft, setDraft] = useState<AppConfig | null>(null)
   const [saved, setSaved] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
 
   useEffect(() => {
     if (config) setDraft(config)
   }, [config])
+
+  useEffect(() => {
+    void getWallpaperStudio()
+      .updaterGetStatus()
+      .then(setUpdateStatus)
+      .catch(() => undefined)
+  }, [])
 
   if (!draft) {
     return <div className="p-8 text-white/50">加载配置中...</div>
@@ -47,6 +56,24 @@ export function Settings(): React.JSX.Element {
       </header>
 
       {saved && <p className="mb-4 text-sm text-accent">配置已保存</p>}
+
+      {updateStatus?.updateAvailable && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3">
+          <p className="text-sm text-white/80">
+            发现新版本 v{updateStatus.latestVersion}（当前 v{updateStatus.currentVersion}）
+          </p>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              void getWallpaperStudio().openExternal(
+                updateStatus.releaseUrl ?? 'https://github.com/webB1an/bilibili-auto-upload/releases'
+              )
+            }
+          >
+            打开下载页
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-5 xl:grid-cols-2">
         <Card title="wdbzk 资源库 API">

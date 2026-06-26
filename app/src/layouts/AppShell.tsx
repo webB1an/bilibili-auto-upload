@@ -5,6 +5,7 @@ const navItems = [
   { to: '/', label: '仪表盘', end: true },
   { to: '/onboarding', label: '首次设置' },
   { to: '/publish', label: '一键发布' },
+  { to: '/queue', label: '发布队列' },
   { to: '/history', label: '任务历史' },
   { to: '/accounts', label: '账号与工具' },
   { to: '/settings', label: '系统设置' }

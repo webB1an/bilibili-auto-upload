@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppConfig, DepCheckResult, HistoryRecord, PipelineProgress, PreflightResult } from '../src/types'
+import type {
+  AppConfig,
+  DepCheckResult,
+  HistoryRecord,
+  PipelineProgress,
+  PreflightResult,
+  QueueRuntimeState,
+  UpdateStatus
+} from '../src/types'
 
 contextBridge.exposeInMainWorld('wallpaperStudio', {
   bridgeVersion: 2,
@@ -42,6 +50,20 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
   panControlTest: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('panControl:test'),
   historyList: (): Promise<HistoryRecord[]> => ipcRenderer.invoke('history:list'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:openExternal', url),
+  queueStart: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('queue:start'),
+  queueStop: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('queue:stop'),
+  queueStatus: (): Promise<QueueRuntimeState> => ipcRenderer.invoke('queue:status'),
+  queueUpdateSettings: (settings: AppConfig['queue']): Promise<AppConfig> =>
+    ipcRenderer.invoke('queue:updateSettings', settings),
+  updaterGetStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('updater:getStatus'),
+  updaterCheck: (force?: boolean): Promise<UpdateStatus> => ipcRenderer.invoke('updater:check', force),
+  onQueueStatus: (callback: (status: QueueRuntimeState) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: QueueRuntimeState): void => {
+      callback(status)
+    }
+    ipcRenderer.on('queue:status', listener)
+    return () => ipcRenderer.removeListener('queue:status', listener)
+  },
   onPipelineProgress: (callback: (progress: PipelineProgress) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: PipelineProgress): void => {
       callback(progress)
