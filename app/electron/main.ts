@@ -11,6 +11,12 @@ import { ensureBdpanInstalled, installBdpan, openBaiduLoginTerminal } from './se
 import { cancelPipeline, isPipelineRunning, runPipeline } from './services/pipeline'
 import { runPreflight } from './services/preflight'
 import { testPanControlConnection } from './services/panControl'
+import {
+  getBilibiliQrcodeDataUrl,
+  pollBilibiliLogin,
+  startBilibiliLoginBackground,
+  stopBilibiliLoginProcess
+} from './services/bilibiliLogin'
 import { listHistory } from './services/state'
 import { resolvePreloadPath } from './utils/preloadPath'
 import type { AppConfig } from '../src/types'
@@ -140,6 +146,30 @@ function registerIpc(): void {
       return { ok: false, message: `未找到二维码文件，请先在终端完成登录流程: ${qrcodePath}` }
     }
     return { ok: true, message: '已打开 qrcode.png' }
+  })
+
+  ipcMain.handle('accounts:bilibiliStartLogin', async () => {
+    const setup = await ensureBilibiliCliInstalled()
+    if (!setup.ok) {
+      return { ok: false, message: setup.message }
+    }
+    const config = loadConfig()
+    return startBilibiliLoginBackground(config)
+  })
+
+  ipcMain.handle('accounts:bilibiliGetQrcode', async () => {
+    const config = loadConfig()
+    return getBilibiliQrcodeDataUrl(config)
+  })
+
+  ipcMain.handle('accounts:bilibiliPollLogin', async () => {
+    const config = loadConfig()
+    return pollBilibiliLogin(config)
+  })
+
+  ipcMain.handle('accounts:bilibiliStopLogin', async () => {
+    stopBilibiliLoginProcess()
+    return { ok: true }
   })
 
   ipcMain.handle('accounts:baiduWhoami', async () => {

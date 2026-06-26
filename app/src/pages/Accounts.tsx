@@ -5,8 +5,9 @@ import { Card } from '@/components/ui/Card'
 import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
-import { getBridgeErrorMessage, getWallpaperStudio } from '@/lib/bridge'
+import { BilibiliLoginPanel } from '@/components/BilibiliLoginPanel'
 import { useConfigRefresh } from '@/hooks/useConfigRefresh'
+import { getBridgeErrorMessage, getWallpaperStudio } from '@/lib/bridge'
 
 export function Accounts(): React.JSX.Element {
   useBootstrap()
@@ -68,7 +69,7 @@ export function Accounts(): React.JSX.Element {
     <div className="flex h-full flex-col overflow-auto p-8">
       <header className="mb-8">
         <p className="text-sm text-white/45">Accounts</p>
-        <h2 className="font-display text-3xl font-bold text-white">账号授权</h2>
+        <h2 className="font-display text-3xl font-bold text-white">账号与工具</h2>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-2">
@@ -79,7 +80,15 @@ export function Accounts(): React.JSX.Element {
               label={bilibiliLabel}
               detail={bilibiliAccount?.message}
             />
-            <div className="flex flex-wrap gap-3">
+            <p className="text-sm text-white/45">
+              推荐使用「应用内登录」扫码；也可打开终端或使用 qrcode.png。
+            </p>
+            <BilibiliLoginPanel
+              onSuccess={() => {
+                void refreshBilibili()
+              }}
+            />
+            <div className="flex flex-wrap gap-3 pt-2">
               <Button
                 disabled={installingBilibiliCli}
                 onClick={() => {

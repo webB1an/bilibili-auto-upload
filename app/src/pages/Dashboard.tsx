@@ -57,11 +57,11 @@ export function Dashboard(): React.JSX.Element {
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         <Card title="依赖检测" subtitle="发布前请确保全部就绪">
           <div className="grid gap-3">
-            <StatusBadge ok={!!deps?.node.ok} label="Node.js" detail={deps?.node.version || deps?.node.message} />
+            <StatusBadge ok={!!deps?.node.ok} label="内置 Node" detail={deps?.node.version || deps?.node.message} />
             <StatusBadge ok={!!deps?.curl.ok} label="curl" detail={deps?.curl.message} />
             <StatusBadge ok={!!deps?.python.ok} label="Python" detail={deps?.python.version || deps?.python.message} />
             <StatusBadge ok={!!deps?.bdpan.ok} label="百度网盘 bdpan" detail={deps?.bdpan.message} />
-            <StatusBadge ok={!!deps?.sau.ok} label="social-auto-upload" detail={deps?.sau.message} />
+            <StatusBadge ok={!!deps?.sau.ok} label="B 站 CLI" detail={deps?.sau.message} />
           </div>
         </Card>
         <Card title="快捷入口">
@@ -70,7 +70,7 @@ export function Dashboard(): React.JSX.Element {
               <Button variant="secondary">打开发布页</Button>
             </Link>
             <Link to="/accounts">
-              <Button variant="secondary">检查账号</Button>
+              <Button variant="secondary">账号与工具</Button>
             </Link>
             <Link to="/settings">
               <Button variant="secondary">系统设置</Button>

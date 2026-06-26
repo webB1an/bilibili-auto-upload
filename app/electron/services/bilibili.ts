@@ -20,7 +20,7 @@ function resolveBiliCli(config: AppConfig): string {
 export function ensureSauEnvironment(config: AppConfig): { ok: boolean; message: string; createdConf?: boolean } {
   const root = config.bilibili.socialAutoUploadPath
   if (!fs.existsSync(root)) {
-    return { ok: false, message: `social-auto-upload 目录不存在: ${root}` }
+    return { ok: false, message: `B 站 CLI 目录不存在: ${root}` }
   }
 
   try {

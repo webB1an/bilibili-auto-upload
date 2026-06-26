@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BilibiliLoginPanel } from '@/components/BilibiliLoginPanel'
+import { OnboardingStepper, deriveOnboardingStep } from '@/components/OnboardingStepper'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -21,6 +23,16 @@ export function Onboarding(): React.JSX.Element {
   const [message, setMessage] = useState('')
   const [messageError, setMessageError] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [manualStep, setManualStep] = useState<number | null>(null)
+
+  const autoStep = useMemo(() => deriveOnboardingStep(result), [result])
+  const currentStep = manualStep ?? autoStep
+
+  useEffect(() => {
+    if (config?.panControl.apiToken) {
+      setToken(config.panControl.apiToken)
+    }
+  }, [config?.panControl.apiToken])
 
   const saveWdbzk = async (): Promise<void> => {
     if (!config) return
@@ -47,6 +59,7 @@ export function Onboarding(): React.JSX.Element {
       setMessageError(!ok)
       await refreshConfig()
       await refresh()
+      setManualStep(null)
     } catch (error) {
       setMessageError(true)
       setMessage((error as Error).message)
@@ -59,7 +72,7 @@ export function Onboarding(): React.JSX.Element {
     const latest = await getWallpaperStudio().preflightRun('quick')
     if (!latest.ready) {
       setMessageError(true)
-      setMessage('仍有未完成的步骤，请按下方清单逐项处理')
+      setMessage('仍有未完成的步骤，请按上方步骤逐项处理')
       return
     }
     await getWallpaperStudio().onboardingComplete()
@@ -70,117 +83,100 @@ export function Onboarding(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col overflow-auto p-8">
-      <header className="mb-8">
+      <header className="mb-2">
         <p className="text-sm text-white/45">Setup</p>
         <h2 className="font-display text-3xl font-bold text-white">首次设置</h2>
         <p className="mt-2 max-w-2xl text-sm text-white/50">
-          按顺序完成：安装工具 → 登录百度与 B 站 → 填写 wdbzk Token。全部就绪后即可一键发布。
+          按步骤完成安装与授权，全部就绪后即可一键发布。
         </p>
       </header>
 
+      <OnboardingStepper currentStep={currentStep} onStepClick={setManualStep} />
+
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">
-          <Card title="1. 安装工具" subtitle="应用会自动下载并安装到本地工具目录">
-            <div className="flex flex-wrap gap-3">
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void runAction(() => getWallpaperStudio().accountsBaiduInstall())
-                }
-              >
-                安装 bdpan
-              </Button>
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void runAction(() => getWallpaperStudio().accountsBilibiliInstall())
-                }
-              >
-                安装 B 站 CLI
-              </Button>
-              <Button
-                disabled={busy}
-                onClick={() => void runAction(() => getWallpaperStudio().pythonDetect())}
-              >
-                检测 Python
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() =>
-                  void getWallpaperStudio()
-                    .openExternal('https://www.python.org/downloads/')
-                    .then(() => {
-                      setMessage('已在浏览器打开 Python 下载页')
-                      setMessageError(false)
-                    })
-                }
-              >
-                下载 Python
-              </Button>
-              <Button variant="secondary" disabled={loading} onClick={() => void refresh()}>
-                重新检测
-              </Button>
-            </div>
-          </Card>
-
-          <Card title="2. 账号登录" subtitle="在新开的终端窗口中扫码完成授权">
-            <div className="flex flex-wrap gap-3">
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void runAction(() => getWallpaperStudio().accountsBaiduOpenLoginTerminal())
-                }
-              >
-                百度网盘登录
-              </Button>
-              <Button
-                disabled={busy}
-                onClick={() =>
-                  void runAction(() => getWallpaperStudio().accountsBilibiliOpenLoginTerminal())
-                }
-              >
-                B 站登录
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() =>
-                  void runAction(async () => {
-                    const bilibili = await getWallpaperStudio().accountsBilibiliCheck()
-                    return { ok: bilibili.valid, message: bilibili.message }
-                  })
-                }
-              >
-                检测 B 站状态
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() =>
-                  void runAction(() => getWallpaperStudio().accountsBaiduWhoami())
-                }
-              >
-                检测百度状态
-              </Button>
-            </div>
-          </Card>
-
-          <Card title="3. wdbzk 配置" subtitle="panapi.wdbzk.com">
-            <div className="space-y-4">
-              <Input
-                label="API Token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="向 wdbzk 运营获取 Token"
-              />
-              <Input
-                label="分类 ID"
-                type="number"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              />
+          {currentStep === 1 && (
+            <Card title="Step 1 · 安装工具" subtitle="应用会自动安装到本地工具目录">
               <div className="flex flex-wrap gap-3">
+                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBaiduInstall())}>
+                  安装 bdpan
+                </Button>
+                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBilibiliInstall())}>
+                  安装 B 站 CLI
+                </Button>
+                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().pythonDetect())}>
+                  检测 Python
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void getWallpaperStudio().openExternal('https://www.python.org/downloads/')
+                  }
+                >
+                  下载 Python
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {currentStep === 2 && (
+            <Card title="Step 2 · 登录账号" subtitle="百度网盘与 B 站">
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    disabled={busy}
+                    onClick={() =>
+                      void runAction(() => getWallpaperStudio().accountsBaiduOpenLoginTerminal())
+                    }
+                  >
+                    百度网盘登录
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => void runAction(() => getWallpaperStudio().accountsBaiduWhoami())}
+                  >
+                    检测百度状态
+                  </Button>
+                </div>
+                <BilibiliLoginPanel
+                  onStatus={(text, error) => {
+                    setMessage(text)
+                    setMessageError(error)
+                  }}
+                  onSuccess={() => {
+                    void refresh()
+                  }}
+                />
+                <Button
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    void runAction(() => getWallpaperStudio().accountsBilibiliOpenLoginTerminal())
+                  }
+                >
+                  改用终端登录 B 站
+                </Button>
+              </div>
+            </Card>
+          )}
+
+          {currentStep === 3 && (
+            <Card title="Step 3 · wdbzk 配置" subtitle="panapi.wdbzk.com">
+              <div className="space-y-4">
+                <Input
+                  label="API Token"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="向 wdbzk 运营获取 Token"
+                />
+                <Input
+                  label="分类 ID"
+                  type="number"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                />
                 <Button
                   disabled={busy}
                   onClick={() =>
@@ -192,12 +188,28 @@ export function Onboarding(): React.JSX.Element {
                 >
                   保存并测试连接
                 </Button>
+                <p className="text-xs text-white/40">
+                  壁纸展示站 wallpaper.wdbzk.com 会自动同步该分类资源。
+                </p>
               </div>
-              <p className="text-xs text-white/40">
-                接口地址固定为 https://panapi.wdbzk.com，壁纸展示站 wallpaper.wdbzk.com 会自动同步该分类资源。
+            </Card>
+          )}
+
+          {currentStep === 4 && (
+            <Card title="Step 4 · 完成" subtitle="确认全部就绪">
+              <p className="text-sm text-white/60">
+                若右侧检查项全部通过，即可进入一键发布页开始第一条流水线。
               </p>
-            </div>
-          </Card>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button disabled={!ready || busy} onClick={() => void finish()}>
+                  完成设置，去发布
+                </Button>
+                <Button variant="secondary" disabled={loading} onClick={() => void refresh()}>
+                  刷新状态
+                </Button>
+              </div>
+            </Card>
+          )}
 
           {message && (
             <p
@@ -210,6 +222,23 @@ export function Onboarding(): React.JSX.Element {
               {message}
             </p>
           )}
+
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              disabled={currentStep <= 1}
+              onClick={() => setManualStep(Math.max(1, currentStep - 1))}
+            >
+              上一步
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={currentStep >= 4}
+              onClick={() => setManualStep(Math.min(4, currentStep + 1))}
+            >
+              下一步
+            </Button>
+          </div>
         </div>
 
         <Card title="就绪检查" subtitle={loading ? '检测中...' : ready ? '可以发布' : '尚未就绪'}>
@@ -217,14 +246,6 @@ export function Onboarding(): React.JSX.Element {
             {result?.steps.map((step) => (
               <StatusBadge key={step.id} ok={step.ok} label={step.label} detail={step.message} />
             ))}
-          </div>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button disabled={!ready || busy} onClick={() => void finish()}>
-              完成设置，去发布
-            </Button>
-            <Button variant="secondary" disabled={loading} onClick={() => void refresh()}>
-              刷新状态
-            </Button>
           </div>
         </Card>
       </div>

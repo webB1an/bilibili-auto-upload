@@ -141,6 +141,10 @@ export interface WallpaperStudioAPI {
   pythonDetect: () => Promise<{ ok: boolean; message: string; downloadUrl?: string }>
   onboardingComplete: () => Promise<{ ok: boolean }>
   accountsBilibiliInstall: () => Promise<{ ok: boolean; message: string; path?: string }>
+  accountsBilibiliStartLogin: () => Promise<{ ok: boolean; message: string }>
+  accountsBilibiliGetQrcode: () => Promise<{ ok: boolean; dataUrl?: string; message: string }>
+  accountsBilibiliPollLogin: () => Promise<{ valid: boolean; message: string; finished: boolean }>
+  accountsBilibiliStopLogin: () => Promise<{ ok: boolean }>
   panControlTest: () => Promise<{ ok: boolean; message: string }>
   historyList: () => Promise<HistoryRecord[]>
   openExternal: (url: string) => Promise<void>

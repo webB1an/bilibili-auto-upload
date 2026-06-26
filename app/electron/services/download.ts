@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
 import type { AppConfig, DownloadResult } from '../../src/types'
+import { getNodeSpawnEnv, resolveNodeExecutable } from './nodeRuntime'
 import { isDetailUrlPosted } from './state'
 import { normalizeWallpaperName } from './title'
 
@@ -60,7 +61,8 @@ function runNodeScript(
   onPreview?: (preview: { title: string }) => void
 ): Promise<{ ok: boolean; code: number; output: string }> {
   return new Promise((resolve) => {
-    const child = spawn('node', [scriptPath, ...args], {
+    const child = spawn(resolveNodeExecutable(), [scriptPath, ...args], {
+      env: getNodeSpawnEnv(),
       windowsHide: true,
       shell: false
     })

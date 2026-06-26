@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import type { AppConfig, DepCheckResult } from '../../src/types'
 import { getManagedBdpanPath, resolveBdpanPath } from './bdpanRuntime'
+import { detectEmbeddedNode } from './nodeRuntime'
 
 const execFileAsync = promisify(execFile)
 
@@ -30,7 +31,10 @@ async function runCommand(
 }
 
 export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
-  const node = await runCommand('node', ['--version'])
+  const nodeRuntime = await detectEmbeddedNode()
+  const node = nodeRuntime.ok
+    ? { ok: true, version: nodeRuntime.version ?? nodeRuntime.message }
+    : { ok: false, message: nodeRuntime.message }
   const curl = await runCommand('curl', ['--version'])
   const python = await runCommand('python', ['--version'])
   const bdpanPath = resolveBdpanPath(config)
@@ -54,8 +58,8 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
 
   return {
     node: node.ok
-      ? { ok: true, version: node.stdout }
-      : { ok: false, message: '未找到 Node.js，请安装 Node 18+' },
+      ? { ok: true, version: node.version }
+      : { ok: false, message: node.message ?? '内置 Node 不可用' },
     curl: curl.ok
       ? { ok: true }
       : { ok: false, message: '未找到 curl，Windows 10+ 通常自带 curl.exe' },
@@ -68,7 +72,7 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
         ? { ok: true, message: bdpan.stdout.split('\n').find((line) => line.includes('已登录')) || '已登录' }
         : { ok: false, message: bdpan.stderr || bdpan.stdout || 'bdpan 未登录' },
     sau: sauOk
-      ? { ok: true, message: sauMessage }
+      ? { ok: true, message: 'B 站 CLI 就绪' }
       : { ok: false, message: sauMessage }
   }
 }

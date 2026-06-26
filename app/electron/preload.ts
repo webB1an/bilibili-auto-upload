@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
     ipcRenderer.invoke('accounts:bilibiliOpenQrcode'),
   accountsBilibiliInstall: (): Promise<{ ok: boolean; message: string; path?: string }> =>
     ipcRenderer.invoke('accounts:bilibiliInstall'),
+  accountsBilibiliStartLogin: (): Promise<{ ok: boolean; message: string }> =>
+    ipcRenderer.invoke('accounts:bilibiliStartLogin'),
+  accountsBilibiliGetQrcode: (): Promise<{ ok: boolean; dataUrl?: string; message: string }> =>
+    ipcRenderer.invoke('accounts:bilibiliGetQrcode'),
+  accountsBilibiliPollLogin: (): Promise<{ valid: boolean; message: string; finished: boolean }> =>
+    ipcRenderer.invoke('accounts:bilibiliPollLogin'),
+  accountsBilibiliStopLogin: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke('accounts:bilibiliStopLogin'),
   accountsBaiduWhoami: (): Promise<{ ok: boolean; message: string }> =>
     ipcRenderer.invoke('accounts:baiduWhoami'),
   accountsBaiduInstall: (): Promise<{ ok: boolean; message: string; path?: string }> =>

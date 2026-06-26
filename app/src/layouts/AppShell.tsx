@@ -6,7 +6,7 @@ const navItems = [
   { to: '/onboarding', label: '首次设置' },
   { to: '/publish', label: '一键发布' },
   { to: '/history', label: '任务历史' },
-  { to: '/accounts', label: '账号授权' },
+  { to: '/accounts', label: '账号与工具' },
   { to: '/settings', label: '系统设置' }
 ]
 
@@ -39,7 +39,7 @@ export function AppShell(): React.JSX.Element {
           ))}
         </nav>
         <div className="mt-6 rounded-xl border border-white/5 bg-black/20 p-4 text-xs text-white/45">
-          下载 → 百度分享 → pan-control → B 站投稿
+          下载 → 百度分享 → wdbzk 入库 → B 站投稿
         </div>
       </aside>
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
