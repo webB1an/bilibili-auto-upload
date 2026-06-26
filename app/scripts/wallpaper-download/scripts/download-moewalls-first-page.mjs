@@ -19,13 +19,17 @@
  *   4. 下载指定页，并自定义保存目录：
  *   node .\scripts\download-moewalls-first-page.mjs --page 3 --out "D:\Wallpapers\MoeWalls"
  *
- *   5. 查看帮助：
+ *   5. 只解析页面、不下载文件：
+ *   node .\scripts\download-moewalls-first-page.mjs --dry-run
+ *
+ *   6. 查看帮助：
  *   node .\scripts\download-moewalls-first-page.mjs --help
  *
  * 参数说明：
  *   --page / -p   指定下载第几页；不传则默认第 1 页。
  *   --out / -o    指定壁纸保存目录；不传则保存到项目根目录下的 downloads。
- *   --help / -h   查看脚本使用教程。
+ *   --dry-run     只解析页面，不下载文件。
+ *   --limit / -l  最多处理 N 条（下载或 dry-run 预览）。
  *
  * 去重规则：
  *   按“壁纸详情页 URL”去重，不按文件名去重。
@@ -74,11 +78,14 @@ Usage:
   node "${SCRIPT_PATH}" -p 3
   node "${SCRIPT_PATH}" --out "D:\\Wallpapers\\MoeWalls"
   node "${SCRIPT_PATH}" --page 3 --out "D:\\Wallpapers\\MoeWalls"
+  node "${SCRIPT_PATH}" --dry-run --limit 1
   node "${SCRIPT_PATH}" --help
 
 Options:
   -p, --page <number>  Download wallpapers from a specific listing page. Default: 1.
   -o, --out <path>     Save wallpaper videos to this folder. Default: project-folder\\downloads.
+  -l, --limit <number> Maximum items to download or preview. Default: unlimited.
+  --dry-run            Parse pages and print what would be downloaded without downloading files.
   -h, --help           Show this tutorial.
 
 Workflow:
@@ -93,11 +100,15 @@ Workflow:
 }
 
 function parseArgs(argv) {
-  const options = { page: 1, outDir: path.join(PROJECT_DIR, "downloads"), limit: 999999 };
+  const options = { page: 1, outDir: path.join(PROJECT_DIR, "downloads"), dryRun: false, limit: 999999 };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "-h" || arg === "--help") {
       options.help = true;
+      continue;
+    }
+    if (arg === "--dry-run") {
+      options.dryRun = true;
       continue;
     }
     if (arg === "-p" || arg === "--page") {
@@ -451,6 +462,7 @@ await mkdir(CONFIG_DIR, { recursive: true });
 const pageUrl = getPageUrl(options.page);
 console.log(`Selected page: ${options.page}`);
 console.log(`Listing URL: ${pageUrl}`);
+if (options.dryRun) console.log("Dry run: downloads will be skipped.");
 
 const home = await fetchText(pageUrl);
 const items = parsePageItems(home);
@@ -495,6 +507,25 @@ for (let i = 0; i < items.length; i += 1) {
   if (!detail.downloadToken) {
     results.push({ ...item, detailUrl, page: options.page, pageUrl, ...detail, name, nameSource, status: "missing-download-token" });
     console.log(`[${i + 1}/${items.length}] skipped, missing download token: ${name}`);
+    continue;
+  }
+
+  if (options.dryRun) {
+    results.push({
+      ...item,
+      detailUrl,
+      page: options.page,
+      pageUrl,
+      ...detail,
+      name,
+      nameSource,
+      status: "dry-run",
+    });
+    console.log(`[${i + 1}/${items.length}] would download: ${name}`);
+    if (results.filter((entry) => entry.status === "dry-run").length >= options.limit) {
+      console.log(`Reached limit of ${options.limit}, stopping dry-run.`);
+      break;
+    }
     continue;
   }
 
