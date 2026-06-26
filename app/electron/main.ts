@@ -34,6 +34,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+let startupNotice: string | null = null
 
 function createWindow(): void {
   const preloadPath = resolvePreloadPath(__dirname)
@@ -267,6 +268,12 @@ function registerIpc(): void {
   ipcMain.handle('updater:getStatus', async () => getUpdateStatus())
 
   ipcMain.handle('updater:check', async (_event, force?: boolean) => checkForUpdates(force))
+
+  ipcMain.handle('startup:consumeNotice', async () => {
+    const message = startupNotice
+    startupNotice = null
+    return message ? { message } : null
+  })
 }
 
 app.whenReady().then(async () => {
@@ -278,15 +285,18 @@ app.whenReady().then(async () => {
     if (preflight.ready) {
       config.onboarding.completed = true
       saveConfig(config)
+      startupNotice = '检测到已完成配置，已跳过首次设置'
     }
   }
+
+  const activeConfig = loadConfig()
 
   createWindow()
   createTray()
 
   void checkForUpdates(false)
 
-  if (config.queue.enabled) {
+  if (activeConfig.queue.enabled) {
     startQueue(mainWindow)
   }
 

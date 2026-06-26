@@ -177,6 +177,7 @@ export interface WallpaperStudioAPI {
   queueStop: () => Promise<{ ok: boolean; message: string }>
   queueStatus: () => Promise<QueueRuntimeState>
   queueUpdateSettings: (settings: AppConfig['queue']) => Promise<AppConfig>
+  startupConsumeNotice: () => Promise<{ message: string } | null>
   updaterGetStatus: () => Promise<UpdateStatus>
   updaterCheck: (force?: boolean) => Promise<UpdateStatus>
   onQueueStatus: (callback: (status: QueueRuntimeState) => void) => () => void

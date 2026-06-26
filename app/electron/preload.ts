@@ -57,6 +57,8 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
     ipcRenderer.invoke('queue:updateSettings', settings),
   updaterGetStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('updater:getStatus'),
   updaterCheck: (force?: boolean): Promise<UpdateStatus> => ipcRenderer.invoke('updater:check', force),
+  startupConsumeNotice: (): Promise<{ message: string } | null> =>
+    ipcRenderer.invoke('startup:consumeNotice'),
   onQueueStatus: (callback: (status: QueueRuntimeState) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, status: QueueRuntimeState): void => {
       callback(status)

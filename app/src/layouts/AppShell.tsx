@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { BridgeGuard } from '@/components/BridgeGuard'
+import { StartupNotice } from '@/components/StartupNotice'
 
 const navItems = [
   { to: '/', label: '仪表盘', end: true },
@@ -45,6 +46,7 @@ export function AppShell(): React.JSX.Element {
       </aside>
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <BridgeGuard />
+        <StartupNotice />
         <Outlet />
       </main>
     </div>

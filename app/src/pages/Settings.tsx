@@ -75,6 +75,21 @@ export function Settings(): React.JSX.Element {
         </div>
       )}
 
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-white/45">
+        <span>当前版本 v{updateStatus?.currentVersion ?? '—'}</span>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            void getWallpaperStudio()
+              .updaterCheck(true)
+              .then(setUpdateStatus)
+          }
+        >
+          检查更新
+        </Button>
+        {updateStatus?.error && <span className="text-danger">{updateStatus.error}</span>}
+      </div>
+
       <div className="grid gap-5 xl:grid-cols-2">
         <Card title="wdbzk 资源库 API">
           <div className="space-y-4">
