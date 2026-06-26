@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ReadOnlyPath } from '@/components/ReadOnlyPath'
 import { Input, TextArea } from '@/components/ui/Input'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
@@ -11,6 +12,7 @@ export function Settings(): React.JSX.Element {
   const { config, setConfig } = useAppStore()
   const [draft, setDraft] = useState<AppConfig | null>(null)
   const [saved, setSaved] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   useEffect(() => {
     if (config) setDraft(config)
@@ -47,7 +49,7 @@ export function Settings(): React.JSX.Element {
       {saved && <p className="mb-4 text-sm text-accent">配置已保存</p>}
 
       <div className="grid gap-5 xl:grid-cols-2">
-        <Card title="pan-control">
+        <Card title="wdbzk 资源库 API">
           <div className="space-y-4">
             <Input
               label="API Base URL"
@@ -79,11 +81,7 @@ export function Settings(): React.JSX.Element {
               value={draft.baidu.remoteBase}
               onChange={(e) => update({ baidu: { ...draft.baidu, remoteBase: e.target.value } })}
             />
-            <Input
-              label="bdpan 命令路径"
-              value={draft.baidu.bdpanPath}
-              onChange={(e) => update({ baidu: { ...draft.baidu, bdpanPath: e.target.value } })}
-            />
+            <ReadOnlyPath label="bdpan 可执行文件（自动）" value={draft.baidu.bdpanPath} />
             <Input
               label="分享有效期（天，0=永久）"
               type="number"
@@ -129,15 +127,7 @@ export function Settings(): React.JSX.Element {
                 })
               }
             />
-            <Input
-              label="social-auto-upload 路径"
-              value={draft.bilibili.socialAutoUploadPath}
-              onChange={(e) =>
-                update({
-                  bilibili: { ...draft.bilibili, socialAutoUploadPath: e.target.value }
-                })
-              }
-            />
+            <ReadOnlyPath label="B 站 CLI 目录（自动）" value={draft.bilibili.socialAutoUploadPath} />
             <TextArea
               label="投稿简介模板"
               value={draft.bilibili.descTemplate ?? ''}
@@ -184,6 +174,18 @@ export function Settings(): React.JSX.Element {
               />
               成功后删除本地 mp4
             </label>
+            <label className="flex items-center gap-3 text-sm text-white/70">
+              <input
+                type="checkbox"
+                checked={draft.pipeline.abortOnCatalogDuplicate ?? true}
+                onChange={(e) =>
+                  update({
+                    pipeline: { ...draft.pipeline, abortOnCatalogDuplicate: e.target.checked }
+                  })
+                }
+              />
+              wallpaper.wdbzk.com 已有类似资源时中止发布
+            </label>
             <Input
               label="最大文件大小 (MB)"
               type="number"
@@ -199,6 +201,32 @@ export function Settings(): React.JSX.Element {
             />
           </div>
         </Card>
+      </div>
+
+      <div className="mt-6">
+        <Button variant="secondary" onClick={() => setShowAdvanced((value) => !value)}>
+          {showAdvanced ? '收起高级路径设置' : '展开高级路径设置'}
+        </Button>
+        {showAdvanced && (
+          <Card className="mt-4" title="高级路径" subtitle="仅在有自定义安装位置时修改">
+            <div className="space-y-4">
+              <Input
+                label="bdpan 命令路径"
+                value={draft.baidu.bdpanPath}
+                onChange={(e) => update({ baidu: { ...draft.baidu, bdpanPath: e.target.value } })}
+              />
+              <Input
+                label="B 站 CLI 目录"
+                value={draft.bilibili.socialAutoUploadPath}
+                onChange={(e) =>
+                  update({
+                    bilibili: { ...draft.bilibili, socialAutoUploadPath: e.target.value }
+                  })
+                }
+              />
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )

@@ -22,6 +22,7 @@ import {
   markDetailUrlPosted,
   updateHistoryRecord
 } from './state'
+import { findCatalogDuplicate } from './wallpaperCatalog'
 
 let running = false
 let cancelled = false
@@ -131,6 +132,15 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
       bilibiliTitle = buildBilibiliTitleWithLimit(resourceTitle, { chineseName: chinese })
       setPreview(bilibiliTitle, downloaded.filePath)
       progress('translate', 'success', 100, `标题: ${bilibiliTitle}`)
+
+      const duplicate = await findCatalogDuplicate(resourceTitle)
+      log(`去重: ${duplicate.message}`)
+      if (duplicate.duplicate && config.pipeline.abortOnCatalogDuplicate) {
+        throw new Error(duplicate.message)
+      }
+      if (duplicate.duplicate) {
+        progress('translate', 'warning', 100, duplicate.message)
+      }
 
       const record = addHistoryRecord({
         title: bilibiliTitle,

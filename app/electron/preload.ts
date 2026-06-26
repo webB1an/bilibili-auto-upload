@@ -24,7 +24,12 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
   pipelineRun: (): Promise<{ ok: boolean; message: string; recordId?: string }> =>
     ipcRenderer.invoke('pipeline:run'),
   pipelineCancel: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('pipeline:cancel'),
-  preflightRun: (): Promise<PreflightResult> => ipcRenderer.invoke('preflight:run'),
+  preflightRun: (mode?: 'quick' | 'full'): Promise<PreflightResult> =>
+    ipcRenderer.invoke('preflight:run', mode),
+  pythonDetect: (): Promise<{ ok: boolean; message: string; downloadUrl?: string }> =>
+    ipcRenderer.invoke('python:detect'),
+  shellOpenPath: (targetPath: string): Promise<{ ok: boolean; message: string }> =>
+    ipcRenderer.invoke('shell:openPath', targetPath),
   onboardingComplete: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('onboarding:complete'),
   panControlTest: (): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke('panControl:test'),
   historyList: (): Promise<HistoryRecord[]> => ipcRenderer.invoke('history:list'),

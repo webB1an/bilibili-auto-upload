@@ -11,7 +11,7 @@ export function Dashboard(): React.JSX.Element {
   useBootstrap()
   const { deps, history } = useAppStore()
   const { running, run } = usePipeline()
-  const { ready, loading: preflightLoading } = usePreflight()
+  const { ready, loading: preflightLoading } = usePreflight(true, 'full')
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)

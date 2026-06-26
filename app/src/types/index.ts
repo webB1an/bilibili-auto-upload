@@ -23,6 +23,7 @@ export interface AppConfig {
   pipeline: {
     deleteLocalAfterSuccess: boolean
     maxFileSizeMb: number
+    abortOnCatalogDuplicate: boolean
   }
   onboarding: {
     completed: boolean
@@ -91,17 +92,34 @@ export interface ShareResult {
 }
 
 export interface PreflightStep {
-  id: 'bdpan' | 'bilibiliCli' | 'python' | 'baidu' | 'bilibili' | 'wdbzk'
+  id:
+    | 'bdpan'
+    | 'bilibiliCli'
+    | 'python'
+    | 'pythonRequests'
+    | 'baidu'
+    | 'bilibili'
+    | 'wdbzk'
+    | 'disk'
+    | 'downloadSource'
+    | 'catalog'
   label: string
   ok: boolean
   message: string
-  action?: 'installBdpan' | 'installBilibiliCli' | 'baiduLogin' | 'bilibiliLogin' | 'wdbzkToken'
+  action?:
+    | 'installBdpan'
+    | 'installBilibiliCli'
+    | 'baiduLogin'
+    | 'bilibiliLogin'
+    | 'wdbzkToken'
+    | 'installPython'
 }
 
 export interface PreflightResult {
   ready: boolean
   steps: PreflightStep[]
   deps: DepCheckResult
+  mode: 'quick' | 'full'
 }
 
 export interface WallpaperStudioAPI {
@@ -118,7 +136,9 @@ export interface WallpaperStudioAPI {
   accountsBaiduOpenLoginTerminal: () => Promise<{ ok: boolean; message: string }>
   pipelineRun: () => Promise<{ ok: boolean; message: string; recordId?: string }>
   pipelineCancel: () => Promise<{ ok: boolean }>
-  preflightRun: () => Promise<PreflightResult>
+  preflightRun: (mode?: 'quick' | 'full') => Promise<PreflightResult>
+  shellOpenPath: (targetPath: string) => Promise<{ ok: boolean; message: string }>
+  pythonDetect: () => Promise<{ ok: boolean; message: string; downloadUrl?: string }>
   onboardingComplete: () => Promise<{ ok: boolean }>
   accountsBilibiliInstall: () => Promise<{ ok: boolean; message: string; path?: string }>
   panControlTest: () => Promise<{ ok: boolean; message: string }>

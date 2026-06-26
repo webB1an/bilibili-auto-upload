@@ -22,9 +22,11 @@
 
 ## 待办（下一迭代）
 
+详见 **[全面优化计划](./2026-06-26-wdbzk-full-optimization.md)**（Phase 1–4：Python 引导、去重、内置 Node、队列、Token 安全、CI 等）。
+
 - [ ] wallpaper.wdbzk.com 发布前去重 API
 - [ ] 首次向导内嵌二维码（减少终端依赖）
-- [ ] 便携 Python 或检测引导安装 Python 3.10+
+- [ ] Python 检测与安装引导
 - [ ] 运营一页纸文档 `docs/wdbzk-operator-guide.md`
 - [ ] 批量/定时发布队列
 

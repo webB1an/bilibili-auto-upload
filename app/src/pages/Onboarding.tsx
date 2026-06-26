@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { usePreflight } from '@/hooks/usePreflight'
 import { useBootstrap } from '@/hooks/usePipeline'
+import { useConfigRefresh } from '@/hooks/useConfigRefresh'
 import { useAppStore } from '@/store/appStore'
 import { getWallpaperStudio } from '@/lib/bridge'
 
@@ -13,7 +14,8 @@ export function Onboarding(): React.JSX.Element {
   useBootstrap()
   const navigate = useNavigate()
   const { config, setConfig } = useAppStore()
-  const { result, loading, refresh, ready } = usePreflight()
+  const refreshConfig = useConfigRefresh()
+  const { result, loading, refresh, ready } = usePreflight(true, 'quick')
   const [token, setToken] = useState(config?.panControl.apiToken ?? '')
   const [categoryId, setCategoryId] = useState(String(config?.panControl.categoryId ?? 61))
   const [message, setMessage] = useState('')
@@ -43,6 +45,7 @@ export function Onboarding(): React.JSX.Element {
       const ok = res.ok ?? res.valid ?? false
       setMessage(res.message ?? (ok ? '完成' : '失败'))
       setMessageError(!ok)
+      await refreshConfig()
       await refresh()
     } catch (error) {
       setMessageError(true)
@@ -53,8 +56,8 @@ export function Onboarding(): React.JSX.Element {
   }
 
   const finish = async (): Promise<void> => {
-    const latest = await refresh()
-    if (!latest?.ready) {
+    const latest = await getWallpaperStudio().preflightRun('quick')
+    if (!latest.ready) {
       setMessageError(true)
       setMessage('仍有未完成的步骤，请按下方清单逐项处理')
       return
@@ -94,6 +97,26 @@ export function Onboarding(): React.JSX.Element {
                 }
               >
                 安装 B 站 CLI
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={() => void runAction(() => getWallpaperStudio().pythonDetect())}
+              >
+                检测 Python
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() =>
+                  void getWallpaperStudio()
+                    .openExternal('https://www.python.org/downloads/')
+                    .then(() => {
+                      setMessage('已在浏览器打开 Python 下载页')
+                      setMessageError(false)
+                    })
+                }
+              >
+                下载 Python
               </Button>
               <Button variant="secondary" disabled={loading} onClick={() => void refresh()}>
                 重新检测

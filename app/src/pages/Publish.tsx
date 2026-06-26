@@ -6,6 +6,7 @@ import { LogPanel } from '@/components/LogPanel'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { useBootstrap, usePipeline } from '@/hooks/usePipeline'
+import { PreflightPanel } from '@/components/PreflightPanel'
 import { usePreflight } from '@/hooks/usePreflight'
 import { useAppStore } from '@/store/appStore'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,7 @@ export function Publish(): React.JSX.Element {
   useBootstrap()
   const { progress, logs, history, publishSummary } = useAppStore()
   const { running, run, cancel } = usePipeline()
-  const { ready, loading: preflightLoading } = usePreflight()
+  const { ready, loading: preflightLoading } = usePreflight(true, 'full')
 
   const latest = history[0]
   const showPreview = running || (!publishSummary && !!latest && latest.status !== 'success')
@@ -72,9 +73,13 @@ export function Publish(): React.JSX.Element {
             <LogPanel lines={logs} />
           </Card>
         </div>
-        <Card title="流水线进度" subtitle="下载 → 百度 → pan-control → B 站">
+        <Card title="流水线进度" subtitle="下载 → 百度 → wdbzk → B 站">
           <StepProgress current={showStepProgress ? progress : null} />
         </Card>
+      </div>
+
+      <div className="mt-5">
+        <PreflightPanel mode="full" title="发布前检查" />
       </div>
     </div>
   )

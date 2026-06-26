@@ -32,7 +32,8 @@ export function getDefaultConfig(): AppConfig {
     },
     pipeline: {
       deleteLocalAfterSuccess: true,
-      maxFileSizeMb: 300
+      maxFileSizeMb: 300,
+      abortOnCatalogDuplicate: true
     },
     onboarding: {
       completed: false

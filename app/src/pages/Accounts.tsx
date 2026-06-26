@@ -6,6 +6,7 @@ import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
 import { getBridgeErrorMessage, getWallpaperStudio } from '@/lib/bridge'
+import { useConfigRefresh } from '@/hooks/useConfigRefresh'
 
 export function Accounts(): React.JSX.Element {
   useBootstrap()
@@ -23,6 +24,7 @@ export function Accounts(): React.JSX.Element {
   const [installingBdpan, setInstallingBdpan] = useState(false)
   const [installingBilibiliCli, setInstallingBilibiliCli] = useState(false)
   const [openingBaiduLogin, setOpeningBaiduLogin] = useState(false)
+  const refreshConfig = useConfigRefresh()
 
   const handleOpenLoginTerminal = async (): Promise<void> => {
     const bridgeError = getBridgeErrorMessage()
@@ -85,9 +87,10 @@ export function Accounts(): React.JSX.Element {
                   setActionError(false)
                   void getWallpaperStudio()
                     .accountsBilibiliInstall()
-                    .then((result) => {
+                    .then(async (result) => {
                       setActionMessage(result.message)
                       setActionError(!result.ok)
+                      await refreshConfig()
                     })
                     .catch((error: Error) => {
                       setActionError(true)
@@ -143,9 +146,10 @@ export function Accounts(): React.JSX.Element {
                   setActionError(false)
                   void getWallpaperStudio()
                     .accountsBaiduInstall()
-                    .then((result) => {
+                    .then(async (result) => {
                       setActionMessage(result.message)
                       setActionError(!result.ok)
+                      await refreshConfig()
                     })
                     .catch((error: Error) => {
                       setActionError(true)

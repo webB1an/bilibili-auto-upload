@@ -5,6 +5,7 @@ import { loadConfig, saveConfig } from './services/config'
 import { checkDeps } from './services/deps'
 import { bilibiliCheck, getLoginHint, getQrcodePath, openBilibiliLoginTerminal } from './services/bilibili'
 import { ensureBilibiliCliInstalled, installBilibiliCli } from './services/bilibiliRuntime'
+import { detectPython } from './services/pythonRuntime'
 import { baiduWhoami } from './services/baidu'
 import { ensureBdpanInstalled, installBdpan, openBaiduLoginTerminal } from './services/bdpanRuntime'
 import { cancelPipeline, isPipelineRunning, runPipeline } from './services/pipeline'
@@ -157,9 +158,19 @@ function registerIpc(): void {
     return openBaiduLoginTerminal(config)
   })
 
-  ipcMain.handle('preflight:run', async () => {
+  ipcMain.handle('preflight:run', async (_event, mode?: 'quick' | 'full') => {
     const config = loadConfig()
-    return runPreflight(config)
+    return runPreflight(config, mode ?? 'full')
+  })
+
+  ipcMain.handle('python:detect', async () => detectPython())
+
+  ipcMain.handle('shell:openPath', async (_event, targetPath: string) => {
+    const result = await shell.openPath(targetPath)
+    if (result) {
+      return { ok: false, message: result }
+    }
+    return { ok: true, message: '已打开' }
   })
 
   ipcMain.handle('onboarding:complete', async () => {
@@ -176,7 +187,7 @@ function registerIpc(): void {
 
   ipcMain.handle('pipeline:run', async () => {
     const config = loadConfig()
-    const preflight = await runPreflight(config)
+    const preflight = await runPreflight(config, 'full')
     if (!preflight.ready) {
       return { ok: false, message: '环境未就绪，请先完成首次设置（安装工具、登录账号、配置 wdbzk Token）' }
     }
@@ -195,8 +206,18 @@ function registerIpc(): void {
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   registerIpc()
+
+  const config = loadConfig()
+  if (!config.onboarding.completed) {
+    const preflight = await runPreflight(config, 'quick')
+    if (preflight.ready) {
+      config.onboarding.completed = true
+      saveConfig(config)
+    }
+  }
+
   createWindow()
   createTray()
 

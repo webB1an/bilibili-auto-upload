@@ -3,24 +3,43 @@ import { bilibiliCheck } from './bilibili'
 import { baiduWhoami } from './baidu'
 import { checkDeps } from './deps'
 import { ensureBdpanInstalled } from './bdpanRuntime'
-import { ensureBilibiliCliInstalled, ensurePythonRequests } from './bilibiliRuntime'
+import { ensureBilibiliCliInstalled } from './bilibiliRuntime'
+import { detectPython, ensurePythonRequests } from './pythonRuntime'
 import { testPanControlConnection } from './panControl'
+import { checkDiskSpace, checkDownloadSources } from './publishDryRun'
+import { testWallpaperCatalogConnection } from './wallpaperCatalog'
+
+export type PreflightStepId =
+  | 'bdpan'
+  | 'bilibiliCli'
+  | 'python'
+  | 'pythonRequests'
+  | 'baidu'
+  | 'bilibili'
+  | 'wdbzk'
+  | 'disk'
+  | 'downloadSource'
+  | 'catalog'
 
 export interface PreflightStep {
-  id: 'bdpan' | 'bilibiliCli' | 'python' | 'baidu' | 'bilibili' | 'wdbzk'
+  id: PreflightStepId
   label: string
   ok: boolean
   message: string
-  action?: 'installBdpan' | 'installBilibiliCli' | 'baiduLogin' | 'bilibiliLogin' | 'wdbzkToken'
+  action?: 'installBdpan' | 'installBilibiliCli' | 'baiduLogin' | 'bilibiliLogin' | 'wdbzkToken' | 'installPython'
 }
 
 export interface PreflightResult {
   ready: boolean
   steps: PreflightStep[]
   deps: DepCheckResult
+  mode: 'quick' | 'full'
 }
 
-export async function runPreflight(config: AppConfig): Promise<PreflightResult> {
+export async function runPreflight(
+  config: AppConfig,
+  mode: 'quick' | 'full' = 'full'
+): Promise<PreflightResult> {
   const deps = await checkDeps(config)
   const steps: PreflightStep[] = []
 
@@ -42,22 +61,32 @@ export async function runPreflight(config: AppConfig): Promise<PreflightResult> 
     action: biliCli.ok ? undefined : 'installBilibiliCli'
   })
 
-  const pythonReq = await ensurePythonRequests()
+  const python = await detectPython()
   steps.push({
     id: 'python',
+    label: 'Python 3.10+',
+    ok: python.ok,
+    message: python.message,
+    action: python.ok ? undefined : 'installPython'
+  })
+
+  const pythonReq = python.ok ? await ensurePythonRequests() : { ok: false, message: '请先安装 Python' }
+  steps.push({
+    id: 'pythonRequests',
     label: 'Python requests',
     ok: pythonReq.ok,
-    message: pythonReq.message
+    message: pythonReq.message,
+    action: python.ok && !pythonReq.ok ? 'installPython' : undefined
   })
 
   let baiduOk = false
   let baiduMessage = '未检测'
-  if (deps.bdpan.ok) {
+  if (bdpanInstalled.ok) {
     const baidu = await baiduWhoami(config)
     baiduOk = baidu.ok
     baiduMessage = baidu.message
   } else {
-    baiduMessage = '请先安装并登录 bdpan'
+    baiduMessage = '请先安装 bdpan'
   }
   steps.push({
     id: 'baidu',
@@ -69,12 +98,16 @@ export async function runPreflight(config: AppConfig): Promise<PreflightResult> 
 
   let bilibiliOk = false
   let bilibiliMessage = '未检测'
-  if (biliCli.ok && deps.sau.ok) {
+  if (biliCli.ok && deps.sau.ok && pythonReq.ok) {
     const bilibili = await bilibiliCheck(config)
     bilibiliOk = bilibili.valid
     bilibiliMessage = bilibili.message
+  } else if (!biliCli.ok) {
+    bilibiliMessage = biliCli.message
+  } else if (!pythonReq.ok) {
+    bilibiliMessage = '请先完成 Python 环境'
   } else {
-    bilibiliMessage = biliCli.ok ? deps.sau.message ?? 'B 站 CLI 未就绪' : biliCli.message
+    bilibiliMessage = deps.sau.message ?? 'B 站 CLI 未就绪'
   }
   steps.push({
     id: 'bilibili',
@@ -100,6 +133,47 @@ export async function runPreflight(config: AppConfig): Promise<PreflightResult> 
     action: wdbzkOk ? undefined : 'wdbzkToken'
   })
 
-  const ready = steps.every((step) => step.ok)
-  return { ready, steps, deps }
+  if (mode === 'full') {
+    const disk = checkDiskSpace(config)
+    steps.push({
+      id: 'disk',
+      label: '磁盘空间',
+      ok: disk.ok,
+      message: disk.message
+    })
+
+    const sources = checkDownloadSources(config)
+    steps.push({
+      id: 'downloadSource',
+      label: '壁纸下载脚本',
+      ok: sources.ok,
+      message: sources.message
+    })
+
+    const catalog = await testWallpaperCatalogConnection()
+    steps.push({
+      id: 'catalog',
+      label: 'wallpaper 资源库可读',
+      ok: catalog.ok,
+      message: catalog.message
+    })
+  }
+
+  const requiredIds: PreflightStepId[] =
+    mode === 'full'
+      ? [
+          'bdpan',
+          'bilibiliCli',
+          'python',
+          'pythonRequests',
+          'baidu',
+          'bilibili',
+          'wdbzk',
+          'disk',
+          'downloadSource'
+        ]
+      : ['bdpan', 'bilibiliCli', 'python', 'pythonRequests', 'baidu', 'bilibili', 'wdbzk']
+
+  const ready = requiredIds.every((id) => steps.find((step) => step.id === id)?.ok)
+  return { ready, steps, deps, mode }
 }
