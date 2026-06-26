@@ -11,20 +11,23 @@ export interface FfmpegProbeResult {
   message: string
 }
 
+const execFileOptions = {
+  windowsHide: true,
+  shell: false as const
+}
+
 export async function detectFfmpeg(): Promise<FfmpegProbeResult> {
   try {
     const { stdout } = await execFileAsync('ffmpeg', ['-version'], {
-      timeout: 8000,
-      windowsHide: true,
-      shell: process.platform === 'win32'
+      ...execFileOptions,
+      timeout: 8000
     })
     const firstLine = stdout.split('\n').find(Boolean) ?? stdout.trim()
 
     try {
       await execFileAsync('ffprobe', ['-version'], {
-        timeout: 8000,
-        windowsHide: true,
-        shell: process.platform === 'win32'
+        ...execFileOptions,
+        timeout: 8000
       })
     } catch {
       return {
@@ -71,9 +74,8 @@ export async function probeMediaDuration(filePath: string): Promise<number> {
       filePath
     ],
     {
-      timeout: 30_000,
-      windowsHide: true,
-      shell: process.platform === 'win32'
+      ...execFileOptions,
+      timeout: 30_000
     }
   )
   const duration = Number.parseFloat(stdout.trim())
@@ -81,4 +83,30 @@ export async function probeMediaDuration(filePath: string): Promise<number> {
     throw new Error(`无法读取媒体时长: ${filePath}`)
   }
   return duration
+}
+
+export async function probeMediaHasAudio(filePath: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFileAsync(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'a',
+        '-show_entries',
+        'stream=index',
+        '-of',
+        'csv=p=0',
+        filePath
+      ],
+      {
+        ...execFileOptions,
+        timeout: 15_000
+      }
+    )
+    return stdout.trim().length > 0
+  } catch {
+    return false
+  }
 }

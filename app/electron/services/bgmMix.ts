@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import type { AppConfig } from '../../src/types'
-import { detectFfmpeg, probeMediaDuration } from './ffmpegRuntime'
+import { detectFfmpeg, probeMediaDuration, probeMediaHasAudio } from './ffmpegRuntime'
 import { pickBgmTrack } from './bgmLibrary'
 import { registerProcess } from './processRegistry'
 
@@ -15,8 +15,10 @@ export interface BgmMixResult {
   usedOriginal: boolean
 }
 
-function clampFadeSeconds(fadeSeconds: number, videoDuration: number): number {
-  const fade = Math.max(0.1, fadeSeconds)
+const BGM_VOLUME = 1.8
+
+function clampFadeSeconds(fadeSeconds: number | undefined, videoDuration: number): number {
+  const fade = Math.max(0.1, fadeSeconds ?? 2)
   const maxFade = Math.max(0.1, videoDuration / 2 - 0.05)
   return Math.min(fade, maxFade)
 }
@@ -43,7 +45,7 @@ function runFfmpeg(args: string[], log: (line: string) => void): Promise<{ ok: b
       text
         .split('\n')
         .filter(Boolean)
-        .slice(-3)
+        .slice(-5)
         .forEach((line: string) => log(`[ffmpeg] ${line}`))
     })
 
@@ -56,9 +58,21 @@ function runFfmpeg(args: string[], log: (line: string) => void): Promise<{ ok: b
     })
 
     child.on('error', (error) => {
-      resolve({ ok: false, message: error.message })
+      resolve({
+        ok: false,
+        message: `${error.message}（Electron 内请确认 ffmpeg 已加入 PATH，与终端检测一致）`
+      })
     })
   })
+}
+
+function fail(
+  log: (line: string) => void,
+  message: string,
+  trackPath?: string
+): BgmMixResult {
+  log(`BGM: 配乐失败 — ${message}`)
+  return { ok: false, message, usedOriginal: true, trackPath }
 }
 
 export async function prepareBilibiliVideoWithBgm(
@@ -66,14 +80,18 @@ export async function prepareBilibiliVideoWithBgm(
   videoPath: string,
   log: (line: string) => void
 ): Promise<BgmMixResult> {
+  if (!fs.existsSync(videoPath)) {
+    return fail(log, `视频文件不存在: ${videoPath}`)
+  }
+
   const ffmpeg = await detectFfmpeg()
   if (!ffmpeg.ok) {
-    return { ok: false, message: ffmpeg.message, usedOriginal: true }
+    return fail(log, ffmpeg.message)
   }
 
   const picked = pickBgmTrack(config)
   if (!picked.ok) {
-    return { ok: false, message: picked.message, usedOriginal: true }
+    return fail(log, picked.message)
   }
 
   const trackPath = picked.trackPath
@@ -83,25 +101,22 @@ export async function prepareBilibiliVideoWithBgm(
   let videoDuration: number
   try {
     videoDuration = await probeMediaDuration(videoPath)
+    log(`BGM: 视频时长 ${videoDuration.toFixed(2)}s`)
   } catch (error) {
-    return {
-      ok: false,
-      message: (error as Error).message || '无法读取视频时长',
-      usedOriginal: true
-    }
+    return fail(log, (error as Error).message || '无法读取视频时长', trackPath)
   }
 
-  const fade = clampFadeSeconds(config.bgm.fadeSeconds, videoDuration)
+  const fade = clampFadeSeconds(config.bgm?.fadeSeconds, videoDuration)
   const fadeOutStart = Math.max(0, videoDuration - fade)
+  const durationSec = videoDuration.toFixed(3)
+  const fadeOutSec = fadeOutStart.toFixed(3)
   const outputPath = buildOutputPath(videoPath)
 
-  const filter = `[1:a]atrim=0:${videoDuration},asetpts=PTS-STARTPTS,afade=t=in:st=0:d=${fade},afade=t=out:st=${fadeOutStart}:d=${fade}[aout]`
+  const filter = `[1:a]aloop=loop=-1:size=2e+09,atrim=duration=${durationSec},asetpts=PTS-STARTPTS,volume=${BGM_VOLUME},afade=t=in:st=0:d=${fade},afade=t=out:st=${fadeOutSec}:d=${fade}[aout]`
   const args = [
     '-y',
     '-i',
     videoPath,
-    '-stream_loop',
-    '-1',
     '-i',
     trackPath,
     '-filter_complex',
@@ -116,22 +131,31 @@ export async function prepareBilibiliVideoWithBgm(
     'aac',
     '-b:a',
     '192k',
+    '-ar',
+    '44100',
+    '-ac',
+    '2',
     '-movflags',
     '+faststart',
-    '-t',
-    String(videoDuration),
     outputPath
   ]
 
-  log(`BGM: 合成中（视频 ${videoDuration.toFixed(1)}s，淡入淡出 ${fade.toFixed(1)}s）...`)
+  log(`BGM: 合成中（淡入淡出 ${fade.toFixed(1)}s）→ ${outputPath}`)
   const result = await runFfmpeg(args, log)
   if (!result.ok || !fs.existsSync(outputPath)) {
     if (fs.existsSync(outputPath)) {
       fs.unlinkSync(outputPath)
     }
-    return { ok: false, message: result.message, usedOriginal: true, trackPath }
+    return fail(log, result.message, trackPath)
   }
 
+  const hasAudio = await probeMediaHasAudio(outputPath)
+  if (!hasAudio) {
+    fs.unlinkSync(outputPath)
+    return fail(log, '合成完成但输出文件无音轨', trackPath)
+  }
+
+  log(`BGM: 合成成功 → ${outputPath}`)
   return {
     ok: true,
     outputPath,

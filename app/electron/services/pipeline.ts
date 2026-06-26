@@ -223,10 +223,13 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
     const bilibiliVideoPath = bgmResult.ok && bgmResult.outputPath ? bgmResult.outputPath : downloaded.filePath
     if (bgmResult.ok && bgmResult.outputPath) {
       bgmTempPath = bgmResult.outputPath
+      log(`BGM: 合成成功 → ${bgmTempPath}`)
       progress('bgm', 'success', 100, bgmResult.message)
     } else {
+      log(`BGM: 未使用配乐（${bgmResult.message}）`)
       progress('bgm', 'warning', 100, `${bgmResult.message}，使用原视频投稿`)
     }
+    log(`B 站投稿文件: ${bilibiliVideoPath}`)
 
     progress('bilibili', 'running', 40, '正在投稿 B 站...')
     const bilibiliDesc = buildBilibiliDesc(config.bilibili.descTemplate, {
