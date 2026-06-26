@@ -85,8 +85,8 @@ export function Queue(): React.JSX.Element {
         </div>
       </header>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="min-w-0 space-y-5">
           <Card title="队列设置">
             <div className="space-y-4">
               <label className="flex items-center gap-3 text-sm text-white/75">
@@ -161,7 +161,7 @@ export function Queue(): React.JSX.Element {
           </Card>
         </div>
 
-        <Card title="当前任务进度" subtitle="队列触发时与「一键发布」共用流水线">
+        <Card className="min-w-0" title="当前任务进度" subtitle="队列触发时与「一键发布」共用流水线">
           <StepProgress current={running ? progress : null} />
         </Card>
       </div>

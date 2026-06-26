@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ReadOnlyPath } from '@/components/ReadOnlyPath'
 import { Input, TextArea } from '@/components/ui/Input'
+import { WALLPAPER_SOURCES, toggleWallpaperSource } from '@/constants/wallpaperSources'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
 import type { AppConfig, UpdateStatus } from '@/types'
@@ -47,6 +48,7 @@ export function Settings(): React.JSX.Element {
           onClick={() =>
             void window.wallpaperStudio.configSet(draft).then((next) => {
               setConfig(next)
+              useAppStore.getState().invalidatePreflightCache()
               setSaved(true)
             })
           }
@@ -187,23 +189,102 @@ export function Settings(): React.JSX.Element {
           </div>
         </Card>
 
-        <Card title="流水线">
+        <Card title="B 站 BGM 配乐">
           <div className="space-y-4">
-            <TextArea
-              label="壁纸源顺序（逗号分隔）"
-              value={draft.download.sources.join(', ')}
+            <Input
+              label="曲库文件夹路径"
+              value={draft.bgm.libraryPath}
+              onChange={(e) => update({ bgm: { ...draft.bgm, libraryPath: e.target.value } })}
+            />
+            <p className="text-xs text-white/40">
+              仅 B 站投稿使用配乐版本；上传百度仍用原视频。支持 mp3 / wav / flac / m4a / aac / ogg 等。
+              曲库为空或 ffmpeg 不可用时自动改用原视频。
+            </p>
+            <div>
+              <p className="mb-2 text-sm text-white/70">选曲方式</p>
+              <div className="flex flex-wrap gap-4 text-sm text-white/75">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bgm-mode"
+                    checked={draft.bgm.selectionMode === 'random'}
+                    onChange={() => update({ bgm: { ...draft.bgm, selectionMode: 'random' } })}
+                  />
+                  随机
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bgm-mode"
+                    checked={draft.bgm.selectionMode === 'sequential'}
+                    onChange={() => update({ bgm: { ...draft.bgm, selectionMode: 'sequential' } })}
+                  />
+                  依次（状态持久化，重启后继续）
+                </label>
+              </div>
+            </div>
+            <Input
+              label="整段 BGM 头尾淡入淡出（秒）"
+              type="number"
+              value={draft.bgm.fadeSeconds}
               onChange={(e) =>
                 update({
-                  download: {
-                    ...draft.download,
-                    sources: e.target.value
-                      .split(',')
-                      .map((item) => item.trim())
-                      .filter(Boolean)
+                  bgm: {
+                    ...draft.bgm,
+                    fadeSeconds: Math.max(0.1, Number(e.target.value) || 2)
                   }
                 })
               }
             />
+          </div>
+        </Card>
+
+        <Card title="流水线">
+          <div className="space-y-4">
+            <div>
+              <p className="mb-3 text-sm text-white/70">壁纸源（勾选启用）</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {WALLPAPER_SOURCES.map((source) => {
+                  const enabled = draft.download.sources.includes(source.id)
+                  const onlyEnabled = enabled && draft.download.sources.length === 1
+
+                  return (
+                    <label
+                      key={source.id}
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                        enabled
+                          ? 'border-accent/40 bg-accent/10 text-white'
+                          : 'border-white/10 bg-white/5 text-white/55'
+                      } ${onlyEnabled ? 'cursor-not-allowed opacity-80' : 'cursor-pointer hover:border-white/20'}`}
+                      title={onlyEnabled ? '至少保留一个壁纸源' : undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        disabled={onlyEnabled}
+                        onChange={(e) =>
+                          update({
+                            download: {
+                              ...draft.download,
+                              sources: toggleWallpaperSource(
+                                draft.download.sources,
+                                source.id,
+                                e.target.checked
+                              )
+                            }
+                          })
+                        }
+                      />
+                      <span>{source.label}</span>
+                      <span className="ml-auto text-xs text-white/35">{source.id}</span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className="mt-3 text-xs text-white/40">
+                流水线会按上表顺序依次尝试已启用的源；取消勾选后该源不会被下载。
+              </p>
+            </div>
             <label className="flex items-center gap-3 text-sm text-white/70">
               <input
                 type="checkbox"

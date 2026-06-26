@@ -5,7 +5,7 @@ interface OnboardingStepperProps {
 }
 
 const STEPS = [
-  { id: 1, label: '安装工具', hint: 'bdpan · B 站 CLI · Python' },
+  { id: 1, label: '安装工具', hint: 'bdpan · B 站 CLI · Python · ffmpeg' },
   { id: 2, label: '登录账号', hint: '百度网盘 · B 站' },
   { id: 3, label: 'wdbzk 配置', hint: 'API Token' },
   { id: 4, label: '完成', hint: '就绪检查' }

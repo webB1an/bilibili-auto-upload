@@ -17,7 +17,7 @@ export function Publish(): React.JSX.Element {
   useBootstrap()
   const { progress, logs, history, publishSummary, setHistory } = useAppStore()
   const { running, run, cancel } = usePipeline()
-  const { ready, loading: preflightLoading } = usePreflight(true, 'full')
+  const { ready, loading: preflightLoading } = usePreflight({ mode: 'quick', auto: true })
 
   const latest = history[0]
   const showPreview = running || (!publishSummary && !!latest && latest.status !== 'success')
@@ -77,8 +77,8 @@ export function Publish(): React.JSX.Element {
         </div>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <div className="min-w-0 space-y-5">
           {publishSummary && !running ? (
             <PublishSuccessCard record={publishSummary} />
           ) : (
@@ -88,13 +88,13 @@ export function Publish(): React.JSX.Element {
             <LogPanel lines={logs} />
           </Card>
         </div>
-        <Card title="流水线进度" subtitle="下载 → 百度 → wdbzk → B 站">
+        <Card className="min-w-0" title="流水线进度" subtitle="下载 → 百度 → wdbzk → B 站">
           <StepProgress current={showStepProgress ? progress : null} />
         </Card>
       </div>
 
       <div className="mt-5">
-        <PreflightPanel mode="full" title="发布前检查" />
+        <PreflightPanel mode="full" auto={false} title="发布前检查（可选）" />
       </div>
     </div>
   )

@@ -5,6 +5,7 @@ import path from 'path'
 import type { AppConfig, DepCheckResult } from '../../src/types'
 import { getManagedBdpanPath, resolveBdpanPath } from './bdpanRuntime'
 import { detectEmbeddedNode } from './nodeRuntime'
+import { detectFfmpeg } from './ffmpegRuntime'
 
 const execFileAsync = promisify(execFile)
 
@@ -37,6 +38,7 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
     : { ok: false, message: nodeRuntime.message }
   const curl = await runCommand('curl', ['--version'])
   const python = await runCommand('python', ['--version'])
+  const ffmpeg = await detectFfmpeg()
   const bdpanPath = resolveBdpanPath(config)
   const bdpanInstalled = bdpanPath === 'bdpan' || fs.existsSync(bdpanPath)
   const bdpan = bdpanInstalled
@@ -73,6 +75,9 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
         : { ok: false, message: bdpan.stderr || bdpan.stdout || 'bdpan 未登录' },
     sau: sauOk
       ? { ok: true, message: 'B 站 CLI 就绪' }
-      : { ok: false, message: sauMessage }
+      : { ok: false, message: sauMessage },
+    ffmpeg: ffmpeg.ok
+      ? { ok: true, version: ffmpeg.version, message: ffmpeg.message }
+      : { ok: false, message: ffmpeg.message }
   }
 }

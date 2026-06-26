@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { AppConfig, DepCheckResult, HistoryRecord, PipelineProgress } from '@/types'
+import type { AppConfig, DepCheckResult, HistoryRecord, PipelineProgress, PreflightResult } from '@/types'
+import type { PreflightCacheEntry, PreflightMode } from '@/lib/preflightCache'
 
 interface AppStore {
   config: AppConfig | null
@@ -12,6 +13,7 @@ interface AppStore {
   bilibiliAccount: { valid: boolean; message: string } | null
   baiduAccount: { ok: boolean; message: string } | null
   accountChecking: boolean
+  preflightCache: Partial<Record<PreflightMode, PreflightCacheEntry>>
   setConfig: (config: AppConfig | null) => void
   setDeps: (deps: DepCheckResult | null) => void
   setHistory: (history: HistoryRecord[]) => void
@@ -23,6 +25,8 @@ interface AppStore {
   setBilibiliAccount: (status: { valid: boolean; message: string } | null) => void
   setBaiduAccount: (status: { ok: boolean; message: string } | null) => void
   setAccountChecking: (checking: boolean) => void
+  setPreflightCache: (mode: PreflightMode, result: PreflightResult, fetchedAt?: number) => void
+  invalidatePreflightCache: (mode?: PreflightMode) => void
 }
 
 export const useAppStore = create<AppStore>((set) => ({
@@ -36,6 +40,7 @@ export const useAppStore = create<AppStore>((set) => ({
   bilibiliAccount: null,
   baiduAccount: null,
   accountChecking: false,
+  preflightCache: {},
   setConfig: (config) => set({ config }),
   setDeps: (deps) => set({ deps }),
   setHistory: (history) => set({ history }),
@@ -46,5 +51,21 @@ export const useAppStore = create<AppStore>((set) => ({
   setPublishSummary: (publishSummary) => set({ publishSummary }),
   setBilibiliAccount: (bilibiliAccount) => set({ bilibiliAccount }),
   setBaiduAccount: (baiduAccount) => set({ baiduAccount }),
-  setAccountChecking: (accountChecking) => set({ accountChecking })
+  setAccountChecking: (accountChecking) => set({ accountChecking }),
+  setPreflightCache: (mode, result, fetchedAt = Date.now()) =>
+    set((state) => ({
+      preflightCache: {
+        ...state.preflightCache,
+        [mode]: { result, fetchedAt }
+      }
+    })),
+  invalidatePreflightCache: (mode) =>
+    set((state) => {
+      if (!mode) {
+        return { preflightCache: {} }
+      }
+      const next = { ...state.preflightCache }
+      delete next[mode]
+      return { preflightCache: next }
+    })
 }))

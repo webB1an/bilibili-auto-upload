@@ -35,12 +35,14 @@ export function usePipeline() {
     setProgress(null)
     setPublishSummary(null)
     setRunning(true)
+    const invalidatePreflightCache = useAppStore.getState().invalidatePreflightCache
     let result: { ok: boolean; message: string; recordId?: string } | undefined
     try {
       const bridge = getWallpaperStudio()
       result = await bridge.pipelineRun()
       const history = await bridge.historyList()
       setHistory(history)
+      invalidatePreflightCache('full')
       const pipelineResult = result
       if (pipelineResult?.ok) {
         const record = pipelineResult.recordId

@@ -34,6 +34,11 @@ export interface AppConfig {
     dailyLimit: number
     stopOnError: boolean
   }
+  bgm: {
+    libraryPath: string
+    selectionMode: 'random' | 'sequential'
+    fadeSeconds: number
+  }
 }
 
 export interface QueueRuntimeState {
@@ -61,6 +66,7 @@ export interface DepCheckResult {
   python: { ok: boolean; version?: string; message?: string }
   bdpan: { ok: boolean; message?: string }
   sau: { ok: boolean; message?: string }
+  ffmpeg: { ok: boolean; version?: string; message?: string }
 }
 
 export type PipelineStepId =
@@ -69,6 +75,7 @@ export type PipelineStepId =
   | 'baiduUpload'
   | 'baiduShare'
   | 'panControl'
+  | 'bgm'
   | 'bilibili'
 
 export type StepStatus = 'pending' | 'running' | 'success' | 'warning' | 'error' | 'skipped'
@@ -130,6 +137,8 @@ export interface PreflightStep {
     | 'catalog'
     | 'nextItem'
     | 'duplicate'
+    | 'ffmpeg'
+    | 'bgmLibrary'
   label: string
   ok: boolean
   message: string
@@ -166,6 +175,7 @@ export interface WallpaperStudioAPI {
   preflightRun: (mode?: 'quick' | 'full') => Promise<PreflightResult>
   shellOpenPath: (targetPath: string) => Promise<{ ok: boolean; message: string }>
   pythonDetect: () => Promise<{ ok: boolean; message: string; downloadUrl?: string }>
+  ffmpegDetect: () => Promise<{ ok: boolean; message: string; downloadUrl?: string }>
   onboardingComplete: () => Promise<{ ok: boolean }>
   accountsBilibiliInstall: () => Promise<{ ok: boolean; message: string; path?: string }>
   accountsBilibiliStartLogin: () => Promise<{ ok: boolean; message: string }>

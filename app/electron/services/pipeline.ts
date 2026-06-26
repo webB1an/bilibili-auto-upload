@@ -24,6 +24,7 @@ import {
 } from './state'
 import { findCatalogDuplicate } from './wallpaperCatalog'
 import { clearRegisteredProcesses, killRegisteredProcesses, registerProcess } from './processRegistry'
+import { cleanupBgmTempFile, prepareBilibiliVideoWithBgm } from './bgmMix'
 
 let running = false
 let cancelled = false
@@ -75,6 +76,7 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
   let recordId: string | undefined
   let previewTitle: string | undefined
   let previewPath: string | undefined
+  let bgmTempPath: string | undefined
 
   const progress = (
     step: PipelineProgress['step'],
@@ -216,6 +218,16 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
       progress('panControl', 'success', 100, `wdbzk 入库成功 #${panResult.id ?? ''}`)
     }
 
+    progress('bgm', 'running', 35, '正在准备 B 站投稿视频（配乐）...')
+    const bgmResult = await prepareBilibiliVideoWithBgm(config, downloaded.filePath, log)
+    const bilibiliVideoPath = bgmResult.ok && bgmResult.outputPath ? bgmResult.outputPath : downloaded.filePath
+    if (bgmResult.ok && bgmResult.outputPath) {
+      bgmTempPath = bgmResult.outputPath
+      progress('bgm', 'success', 100, bgmResult.message)
+    } else {
+      progress('bgm', 'warning', 100, `${bgmResult.message}，使用原视频投稿`)
+    }
+
     progress('bilibili', 'running', 40, '正在投稿 B 站...')
     const bilibiliDesc = buildBilibiliDesc(config.bilibili.descTemplate, {
       title: resourceTitle,
@@ -227,9 +239,11 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
     })
     await bilibiliUploadVideo(
       config,
-      { filePath: downloaded.filePath, title: bilibiliTitle, desc: bilibiliDesc },
+      { filePath: bilibiliVideoPath, title: bilibiliTitle, desc: bilibiliDesc },
       log
     )
+    cleanupBgmTempFile(bgmTempPath)
+    bgmTempPath = undefined
     updateHistoryRecord(recordId!, { bilibiliStatus: 'success', status: 'success', error: undefined })
     progress('bilibili', 'success', 100, 'B 站投稿完成')
 
@@ -245,6 +259,7 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
     const message = resumable ? '断点续传完成' : '流水线执行成功'
     return { ok: true, message, recordId }
   } catch (error) {
+    cleanupBgmTempFile(bgmTempPath)
     const message = (error as Error).message || '流水线失败'
     log(`错误: ${message}`)
     if (recordId) {

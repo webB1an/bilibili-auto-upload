@@ -6,6 +6,7 @@ import { checkDeps } from './services/deps'
 import { bilibiliCheck, getLoginHint, getQrcodePath, openBilibiliLoginTerminal } from './services/bilibili'
 import { ensureBilibiliCliInstalled, installBilibiliCli } from './services/bilibiliRuntime'
 import { detectPython } from './services/pythonRuntime'
+import { detectFfmpegForSetup } from './services/ffmpegRuntime'
 import { baiduWhoami } from './services/baidu'
 import { ensureBdpanInstalled, installBdpan, openBaiduLoginTerminal } from './services/bdpanRuntime'
 import { cancelPipeline, isPipelineRunning, runPipeline } from './services/pipeline'
@@ -28,6 +29,7 @@ import {
 } from './services/queue'
 import { checkForUpdates, getUpdateStatus } from './services/updater'
 import { resolvePreloadPath } from './utils/preloadPath'
+import { resolveAppIconPath } from './utils/appIcon'
 import type { AppConfig } from '../src/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -36,8 +38,16 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let startupNotice: string | null = null
 
+function loadAppIcon(): Electron.NativeImage | undefined {
+  const iconPath = resolveAppIconPath()
+  if (!iconPath) return undefined
+  const icon = nativeImage.createFromPath(iconPath)
+  return icon.isEmpty() ? undefined : icon
+}
+
 function createWindow(): void {
   const preloadPath = resolvePreloadPath(__dirname)
+  const icon = loadAppIcon()
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -48,6 +58,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: '#0B0F17',
     title: 'Wallpaper Studio',
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
@@ -88,9 +99,8 @@ function createWindow(): void {
 }
 
 function createTray(): void {
-  const iconPath = path.join(app.getAppPath(), 'build', 'icon.png')
-  const icon = nativeImage.createFromPath(iconPath)
-  tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon)
+  const icon = loadAppIcon()
+  tray = new Tray(icon ?? nativeImage.createEmpty())
   tray.setToolTip('Wallpaper Studio')
   tray.setContextMenu(
     Menu.buildFromTemplate([
@@ -207,6 +217,8 @@ function registerIpc(): void {
 
   ipcMain.handle('python:detect', async () => detectPython())
 
+  ipcMain.handle('ffmpeg:detect', async () => detectFfmpegForSetup())
+
   ipcMain.handle('shell:openPath', async (_event, targetPath: string) => {
     const result = await shell.openPath(targetPath)
     if (result) {
@@ -229,7 +241,7 @@ function registerIpc(): void {
 
   ipcMain.handle('pipeline:run', async () => {
     const config = loadConfig()
-    const preflight = await runPreflight(config, 'full')
+    const preflight = await runPreflight(config, 'quick')
     if (!preflight.ready) {
       return { ok: false, message: '环境未就绪，请先完成首次设置（安装工具、登录账号、配置 wdbzk Token）' }
     }

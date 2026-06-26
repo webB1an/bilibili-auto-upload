@@ -68,7 +68,7 @@ async function queueTick(): Promise<void> {
     return
   }
 
-  const preflight = await runPreflight(config, 'full')
+  const preflight = await runPreflight(config, 'quick')
   if (!preflight.ready) {
     lastMessage = '环境未就绪，队列已暂停'
     if (config.queue.stopOnError) {

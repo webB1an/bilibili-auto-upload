@@ -42,9 +42,19 @@ export function loadConfig(): AppConfig {
   try {
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf-8')) as Partial<AppConfig>
     const merged = mergeConfig(raw, defaults)
+    const rawSources = raw.download?.sources ?? []
+    const mergedSources = merged.download.sources
+    const sourcesChanged =
+      rawSources.length !== mergedSources.length ||
+      rawSources.some((source, index) => source !== mergedSources[index])
+    let needsWrite = sourcesChanged
 
     if (migratePlaintextApiToken(merged.panControl.apiToken)) {
       merged.panControl.apiToken = STORED_TOKEN_PLACEHOLDER
+      needsWrite = true
+    }
+
+    if (needsWrite) {
       writeDiskConfig(merged)
     }
 

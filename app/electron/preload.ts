@@ -44,6 +44,8 @@ contextBridge.exposeInMainWorld('wallpaperStudio', {
     ipcRenderer.invoke('preflight:run', mode),
   pythonDetect: (): Promise<{ ok: boolean; message: string; downloadUrl?: string }> =>
     ipcRenderer.invoke('python:detect'),
+  ffmpegDetect: (): Promise<{ ok: boolean; message: string; downloadUrl?: string }> =>
+    ipcRenderer.invoke('ffmpeg:detect'),
   shellOpenPath: (targetPath: string): Promise<{ ok: boolean; message: string }> =>
     ipcRenderer.invoke('shell:openPath', targetPath),
   onboardingComplete: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('onboarding:complete'),

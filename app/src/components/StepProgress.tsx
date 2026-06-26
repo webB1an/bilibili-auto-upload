@@ -6,6 +6,7 @@ const STEPS: Array<{ id: PipelineStepId; label: string }> = [
   { id: 'baiduUpload', label: '上传百度' },
   { id: 'baiduShare', label: '创建分享' },
   { id: 'panControl', label: 'wdbzk 入库' },
+  { id: 'bgm', label: 'B 站配乐' },
   { id: 'bilibili', label: 'B 站投稿' }
 ]
 
@@ -26,7 +27,7 @@ export function StepProgress({ current }: StepProgressProps) {
   const currentIndex = current ? STEPS.findIndex((step) => step.id === current.step) : -1
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       {STEPS.map((step, index) => {
         const isCurrent = current?.step === step.id
         const status = isCurrent
@@ -44,20 +45,20 @@ export function StepProgress({ current }: StepProgressProps) {
         return (
           <div
             key={step.id}
-            className={`overflow-hidden rounded-xl border px-4 py-3 ${statusColor[status]}`}
+            className={`min-w-0 overflow-hidden rounded-xl border px-4 py-3 ${statusColor[status]}`}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{step.label}</p>
                 {isCurrent && current?.message && (
-                  <p className="mt-1 text-xs opacity-80">{current.message}</p>
+                  <p className="mt-1 truncate text-xs opacity-80">{current.message}</p>
                 )}
               </div>
-              <span className="text-xs tabular-nums">{percent}%</span>
+              <span className="shrink-0 text-xs tabular-nums">{percent}%</span>
             </div>
-            <div className="relative mt-3 h-1.5 overflow-hidden rounded-full bg-black/20">
+            <div className="relative mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/20">
               <div
-                className={`h-full max-w-full rounded-full bg-accent transition-[width] duration-500 ${showFlow ? 'step-flow' : ''}`}
+                className={`absolute inset-y-0 left-0 max-w-full rounded-full bg-accent transition-[width] duration-500 ${showFlow ? 'step-flow' : ''}`}
                 style={{ width: `${percent}%` }}
               />
             </div>

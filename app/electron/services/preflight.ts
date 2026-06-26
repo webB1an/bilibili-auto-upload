@@ -8,6 +8,8 @@ import { detectPython, ensurePythonRequests } from './pythonRuntime'
 import { testPanControlConnection } from './panControl'
 import { checkDiskSpace, checkDownloadSources, checkNextPublishPreview } from './publishDryRun'
 import { testWallpaperCatalogConnection } from './wallpaperCatalog'
+import { detectFfmpeg } from './ffmpegRuntime'
+import { describeBgmLibrary } from './bgmLibrary'
 
 export type PreflightStepId =
   | 'bdpan'
@@ -22,6 +24,8 @@ export type PreflightStepId =
   | 'catalog'
   | 'nextItem'
   | 'duplicate'
+  | 'ffmpeg'
+  | 'bgmLibrary'
 
 export interface PreflightStep {
   id: PreflightStepId
@@ -135,6 +139,16 @@ export async function runPreflight(
     action: wdbzkOk ? undefined : 'wdbzkToken'
   })
 
+  const ffmpeg = await detectFfmpeg()
+  steps.push({
+    id: 'ffmpeg',
+    label: 'ffmpeg（BGM 配乐）',
+    ok: ffmpeg.ok,
+    message: ffmpeg.ok
+      ? ffmpeg.message
+      : `${ffmpeg.message}（未安装时将使用原视频投稿 B 站）`
+  })
+
   if (mode === 'full') {
     const disk = checkDiskSpace(config)
     steps.push({
@@ -176,6 +190,14 @@ export async function runPreflight(
         : preview.nextTitle
           ? '库内未发现重复'
           : '无法预检'
+    })
+
+    const bgmLibrary = describeBgmLibrary(config)
+    steps.push({
+      id: 'bgmLibrary',
+      label: 'BGM 曲库',
+      ok: bgmLibrary.ok,
+      message: bgmLibrary.message
     })
   }
 

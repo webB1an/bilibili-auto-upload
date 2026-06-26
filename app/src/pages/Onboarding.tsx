@@ -17,7 +17,7 @@ export function Onboarding(): React.JSX.Element {
   const navigate = useNavigate()
   const { config, setConfig } = useAppStore()
   const refreshConfig = useConfigRefresh()
-  const { result, loading, refresh, ready } = usePreflight(true, 'quick')
+  const { result, loading, refresh, ready } = usePreflight({ mode: 'quick', auto: true })
   const [token, setToken] = useState(config?.panControl.apiToken ?? '')
   const [categoryId, setCategoryId] = useState(String(config?.panControl.categoryId ?? 61))
   const [message, setMessage] = useState('')
@@ -100,26 +100,59 @@ export function Onboarding(): React.JSX.Element {
       <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-5">
           {currentStep === 1 && (
-            <Card title="Step 1 · 安装工具" subtitle="应用会自动安装到本地工具目录">
-              <div className="flex flex-wrap gap-3">
-                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBaiduInstall())}>
-                  安装 bdpan
-                </Button>
-                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBilibiliInstall())}>
-                  安装 B 站 CLI
-                </Button>
-                <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().pythonDetect())}>
-                  检测 Python
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() =>
-                    void getWallpaperStudio().openExternal('https://www.python.org/downloads/')
-                  }
-                >
-                  下载 Python
-                </Button>
+            <Card title="Step 1 · 安装工具" subtitle="应用会自动安装到本地工具目录；ffmpeg 需本机安装">
+              <div className="space-y-5">
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-white/45">内置工具</p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBaiduInstall())}>
+                      安装 bdpan
+                    </Button>
+                    <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().accountsBilibiliInstall())}>
+                      安装 B 站 CLI
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-white/45">Python（B 站 CLI）</p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().pythonDetect())}>
+                      检测 Python
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        void getWallpaperStudio().openExternal('https://www.python.org/downloads/')
+                      }
+                    >
+                      下载 Python
+                    </Button>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-white/45">
+                    ffmpeg（B 站 BGM 配乐，可选）
+                  </p>
+                  <p className="mb-3 text-xs text-white/45">
+                    用于 B 站投稿前静音并配背景音乐。未安装时不影响发布，会自动使用原视频；配置曲库见系统设置。
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button disabled={busy} onClick={() => void runAction(() => getWallpaperStudio().ffmpegDetect())}>
+                      检测 ffmpeg
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void getWallpaperStudio().openExternal('https://ffmpeg.org/download.html')}
+                    >
+                      下载 ffmpeg
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-white/40">
+                    Windows 建议安装完整包（含 ffprobe），安装后将 ffmpeg 加入系统 PATH，再点「检测 ffmpeg」。
+                  </p>
+                </div>
               </div>
             </Card>
           )}
@@ -202,7 +235,8 @@ export function Onboarding(): React.JSX.Element {
           {currentStep === 4 && (
             <Card title="Step 4 · 完成" subtitle="确认全部就绪">
               <p className="text-sm text-white/60">
-                若右侧检查项全部通过，即可进入一键发布页开始第一条流水线。
+                若右侧必需检查项全部通过，即可进入一键发布页。ffmpeg 与 BGM 曲库为可选项：未配置时 B
+                站会使用原视频投稿。
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button disabled={!ready || busy} onClick={() => void finish()}>

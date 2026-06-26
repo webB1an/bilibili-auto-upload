@@ -11,7 +11,7 @@ export function Dashboard(): React.JSX.Element {
   useBootstrap()
   const { history } = useAppStore()
   const { running, run } = usePipeline()
-  const { ready, loading: preflightLoading } = usePreflight(true, 'full')
+  const { ready, loading: preflightLoading } = usePreflight({ mode: 'quick', auto: true })
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
@@ -55,7 +55,7 @@ export function Dashboard(): React.JSX.Element {
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <PreflightPanel mode="full" title="发布就绪检查" />
+        <PreflightPanel mode="full" auto={false} title="发布就绪检查（可选）" />
         <Card title="快捷入口">
           <div className="flex flex-wrap gap-3">
             <Link to="/publish">
