@@ -470,6 +470,7 @@ if (!items.length) throw new Error(`No wallpaper items found on page ${options.p
 
 const urlRecords = await loadUrlRecords();
 const results = [];
+let actionableCount = 0;
 for (let i = 0; i < items.length; i += 1) {
   const item = items[i];
   const detailUrl = normalizeDetailUrl(item.detailUrl);
@@ -522,7 +523,8 @@ for (let i = 0; i < items.length; i += 1) {
       status: "dry-run",
     });
     console.log(`[${i + 1}/${items.length}] would download: ${name}`);
-    if (results.filter((entry) => entry.status === "dry-run").length >= options.limit) {
+    actionableCount += 1;
+    if (actionableCount >= options.limit) {
       console.log(`Reached limit of ${options.limit}, stopping dry-run.`);
       break;
     }
@@ -555,7 +557,8 @@ for (let i = 0; i < items.length; i += 1) {
     status,
   });
   // Stop after reaching download limit
-  if (i + 1 >= options.limit) {
+  actionableCount += 1;
+  if (actionableCount >= options.limit) {
     console.log(`Reached limit of ${options.limit}, stopping.`);
     break;
   }

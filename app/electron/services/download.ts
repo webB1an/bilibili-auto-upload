@@ -5,7 +5,7 @@ import { spawn } from 'child_process'
 import type { AppConfig, DownloadResult } from '../../src/types'
 import { getNodeSpawnEnv, resolveNodeExecutable } from './nodeRuntime'
 import { registerProcess } from './processRegistry'
-import { isDetailUrlPosted } from './state'
+import { isDetailUrlPosted, loadState } from './state'
 import { normalizeWallpaperName } from './title'
 
 const SOURCE_SCRIPTS: Record<string, string> = {
@@ -26,6 +26,24 @@ const MANIFEST_NAMES: Record<string, string> = {
   wallpaperwaves: 'manifest-wallpaperwaves.json'
 }
 
+const URL_RECORD_NAMES: Record<string, string> = {
+  wallpaperwaifu: 'downloaded-wallpaperwaifu-detail-urls.json',
+  moewalls: 'downloaded-detail-urls.json',
+  desktophut: 'downloaded-desktophut-detail-urls.json',
+  motionbgs: 'downloaded-motionbgs-detail-urls.json',
+  wallsflow: 'downloaded-wallsflow-detail-urls.json',
+  wallpaperwaves: 'downloaded-wallpaperwaves-detail-urls.json'
+}
+
+const SOURCE_HOSTS: Record<string, string[]> = {
+  wallpaperwaifu: ['wallpaperwaifu.com'],
+  moewalls: ['moewalls.com'],
+  desktophut: ['desktophut.com'],
+  motionbgs: ['motionbgs.com'],
+  wallsflow: ['wallsflow.com'],
+  wallpaperwaves: ['wallpaperwaves.com']
+}
+
 export function resolveScriptsBase(config: AppConfig): string {
   if (config.download.scriptsDir && config.download.scriptsDir !== 'auto') {
     return config.download.scriptsDir
@@ -34,6 +52,72 @@ export function resolveScriptsBase(config: AppConfig): string {
     return path.join(process.resourcesPath, 'wallpaper-download')
   }
   return path.join(app.getAppPath(), 'scripts', 'wallpaper-download')
+}
+
+function normalizeDetailUrlForRecord(value: string): string {
+  try {
+    const parsed = new URL(value)
+    parsed.hash = ''
+    parsed.search = ''
+    return parsed.href
+  } catch {
+    return value
+  }
+}
+
+function matchesSourceHost(detailUrl: string, source: string): boolean {
+  const hosts = SOURCE_HOSTS[source]
+  if (!hosts) return true
+  try {
+    const hostname = new URL(detailUrl).hostname.replace(/^www\./, '')
+    return hosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+  } catch {
+    return false
+  }
+}
+
+function syncPostedUrlsToDownloadRecord(source: string, base: string, log: (line: string) => void): void {
+  const recordName = URL_RECORD_NAMES[source]
+  if (!recordName) return
+
+  const postedUrls = loadState()
+    .postedDetailUrls.filter((url) => matchesSourceHost(url, source))
+    .map(normalizeDetailUrlForRecord)
+  if (postedUrls.length === 0) return
+
+  const recordPath = path.join(base, 'config', recordName)
+  let records: Array<Record<string, unknown>> = []
+  try {
+    if (fs.existsSync(recordPath)) {
+      const parsed = JSON.parse(fs.readFileSync(recordPath, 'utf-8')) as unknown
+      records = Array.isArray(parsed) ? (parsed as Array<Record<string, unknown>>) : []
+    }
+  } catch {
+    records = []
+  }
+
+  const known = new Set(
+    records
+      .map((record) => (typeof record.detailUrl === 'string' ? normalizeDetailUrlForRecord(record.detailUrl) : ''))
+      .filter(Boolean)
+  )
+  let added = 0
+  for (const detailUrl of postedUrls) {
+    if (known.has(detailUrl)) continue
+    records.push({
+      detailUrl,
+      status: 'posted',
+      recordedAt: new Date().toISOString()
+    })
+    known.add(detailUrl)
+    added += 1
+  }
+
+  if (added > 0) {
+    fs.mkdirSync(path.dirname(recordPath), { recursive: true })
+    fs.writeFileSync(recordPath, JSON.stringify(records, null, 2), 'utf-8')
+    log(`已同步 ${added} 条已投稿记录到 ${source} 下载去重`)
+  }
 }
 
 function cleanupResumeArtifacts(downloadsDir: string, log: (line: string) => void): void {
@@ -148,6 +232,7 @@ export async function peekNextWallpaper(config: AppConfig): Promise<WallpaperPee
     const scriptPath = path.join(scriptsDir, scriptName)
     if (!fs.existsSync(scriptPath)) continue
 
+    syncPostedUrlsToDownloadRecord(source, base, silentLog)
     const result = await runNodeScript(scriptPath, ['--dry-run', '--limit', '1'], silentLog)
     if (!result.ok) continue
 
@@ -222,6 +307,7 @@ export async function downloadWallpaper(
     }
 
     log(`尝试源 ${source} ...`)
+    syncPostedUrlsToDownloadRecord(source, base, log)
     const result = await runNodeScript(scriptPath, ['--limit', '1'], log, onPreview)
     if (!result.ok) {
       log(`${source} 下载脚本失败 (code=${result.code})`)

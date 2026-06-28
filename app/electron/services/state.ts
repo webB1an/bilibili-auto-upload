@@ -82,6 +82,7 @@ export function listHistory(): HistoryRecord[] {
 export function findResumablePipelineJob(): HistoryRecord | null {
   for (const record of loadState().history) {
     if (record.status === 'success' || record.bilibiliStatus === 'success') continue
+    if (record.bilibiliStatus === 'skipped') continue
     if (record.error === '已放弃续传') continue
     if (!record.localPath || !fs.existsSync(record.localPath)) continue
     return record

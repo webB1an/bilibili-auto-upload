@@ -47,4 +47,35 @@ describe('protectAgainstStaleDefaultSave', () => {
     expect(protectedConfig.bgm.libraryPath).toBe('C:\\Users\\Admin\\Desktop\\bgm')
     expect(protectedConfig.translation.provider).toBe('minimax')
   })
+
+  it('allows explicitly switching translation back to google from current settings', () => {
+    const defaults = makeConfig()
+    const incoming = makeConfig()
+    const current = makeConfig()
+
+    incoming.translation.provider = 'google'
+    current.translation.provider = 'minimax'
+
+    const protectedConfig = protectAgainstStaleDefaultSave(incoming, current, defaults)
+
+    expect(protectedConfig.translation.provider).toBe('google')
+  })
+
+  it('allows intentionally resetting configurable fields to current defaults', () => {
+    const defaults = makeConfig()
+    const incoming = makeConfig()
+    const current = makeConfig()
+
+    current.bilibili.descTemplate = 'custom template'
+    current.bilibili.tags = ['custom']
+    current.download.sources = ['wallpaperwaifu', 'moewalls']
+    current.bgm.libraryPath = 'D:\\Music'
+
+    const protectedConfig = protectAgainstStaleDefaultSave(incoming, current, defaults)
+
+    expect(protectedConfig.bilibili.descTemplate).toBe(defaults.bilibili.descTemplate)
+    expect(protectedConfig.bilibili.tags).toEqual(defaults.bilibili.tags)
+    expect(protectedConfig.download.sources).toEqual(defaults.download.sources)
+    expect(protectedConfig.bgm.libraryPath).toBe(defaults.bgm.libraryPath)
+  })
 })

@@ -58,10 +58,11 @@ function preserveUserValue<T>(
   incoming: T,
   current: T | undefined,
   defaultValue: T,
-  staleDefaultValues: T[] = []
+  staleDefaultValues: T[] = [],
+  protectDefault = true
 ): T {
   if (current === undefined) return incoming
-  if ((incoming === defaultValue || staleDefaultValues.includes(incoming)) && current !== incoming) {
+  if (((protectDefault && incoming === defaultValue) || staleDefaultValues.includes(incoming)) && current !== incoming) {
     return current
   }
   return incoming
@@ -70,20 +71,21 @@ function preserveUserValue<T>(
 function preserveUserArray(
   incoming: string[],
   current: string[] | undefined,
-  defaultValue: string[]
+  defaultValue: string[],
+  protectDefault = true
 ): string[] {
   if (!current) return incoming
-  const incomingIsDefault =
-    incoming.length === defaultValue.length &&
-    incoming.every((item, index) => item === defaultValue[index])
-  const currentIsDefault =
-    current.length === defaultValue.length &&
-    current.every((item, index) => item === defaultValue[index])
+  const incomingIsDefault = sameStringArray(incoming, defaultValue)
+  const currentIsDefault = sameStringArray(current, defaultValue)
 
-  if (incomingIsDefault && !currentIsDefault) {
+  if (protectDefault && incomingIsDefault && !currentIsDefault) {
     return current
   }
   return incoming
+}
+
+function sameStringArray(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((item, index) => item === right[index])
 }
 
 export function protectAgainstStaleDefaultSave(
@@ -93,6 +95,9 @@ export function protectAgainstStaleDefaultSave(
 ): AppConfig {
   if (!current) return incoming
 
+  const incomingLooksLikeLegacyDefaultSnapshot =
+    incoming.bilibili.accountName === 'creator' || incoming.bgm.libraryPath === ''
+
   return {
     ...incoming,
     bilibili: {
@@ -101,18 +106,31 @@ export function protectAgainstStaleDefaultSave(
         incoming.bilibili.accountName,
         current.bilibili.accountName,
         defaults.bilibili.accountName,
-        ['creator']
+        incomingLooksLikeLegacyDefaultSnapshot ? ['creator'] : [],
+        incomingLooksLikeLegacyDefaultSnapshot
       ),
       descTemplate: preserveUserValue(
         incoming.bilibili.descTemplate,
         current.bilibili.descTemplate,
-        defaults.bilibili.descTemplate
+        defaults.bilibili.descTemplate,
+        [],
+        incomingLooksLikeLegacyDefaultSnapshot
       ),
-      tags: preserveUserArray(incoming.bilibili.tags, current.bilibili.tags, defaults.bilibili.tags)
+      tags: preserveUserArray(
+        incoming.bilibili.tags,
+        current.bilibili.tags,
+        defaults.bilibili.tags,
+        incomingLooksLikeLegacyDefaultSnapshot
+      )
     },
     download: {
       ...incoming.download,
-      sources: preserveUserArray(incoming.download.sources, current.download.sources, defaults.download.sources)
+      sources: preserveUserArray(
+        incoming.download.sources,
+        current.download.sources,
+        defaults.download.sources,
+        incomingLooksLikeLegacyDefaultSnapshot
+      )
     },
     bgm: {
       ...incoming.bgm,
@@ -120,7 +138,8 @@ export function protectAgainstStaleDefaultSave(
         incoming.bgm.libraryPath,
         current.bgm.libraryPath,
         defaults.bgm.libraryPath,
-        ['']
+        incomingLooksLikeLegacyDefaultSnapshot ? [''] : [],
+        incomingLooksLikeLegacyDefaultSnapshot
       )
     },
     translation: {
@@ -129,7 +148,8 @@ export function protectAgainstStaleDefaultSave(
         incoming.translation.provider,
         current.translation.provider,
         defaults.translation.provider,
-        ['google']
+        incomingLooksLikeLegacyDefaultSnapshot ? ['google'] : [],
+        incomingLooksLikeLegacyDefaultSnapshot
       )
     }
   }

@@ -418,6 +418,7 @@ if (!items.length) throw new Error(`No wallpaper items found on page ${options.p
 
 const urlRecords = await loadUrlRecords();
 const results = [];
+let actionableCount = 0;
 
 for (let i = 0; i < items.length; i += 1) {
   const item = items[i];
@@ -448,7 +449,8 @@ for (let i = 0; i < items.length; i += 1) {
   if (options.dryRun) {
     results.push({ ...item, detailUrl, page: options.page, pageUrl, ...detail, name, status: "dry-run" });
     console.log(`[${i + 1}/${items.length}] would download: ${name}${detail.fileSize ? ` (${detail.fileSize})` : ""}`);
-    if (i + 1 >= options.limit) { console.log(`Reached limit of ${options.limit}, stopping dry-run.`); break; }
+    actionableCount += 1;
+    if (actionableCount >= options.limit) { console.log(`Reached limit of ${options.limit}, stopping dry-run.`); break; }
     continue;
   }
 
@@ -475,7 +477,8 @@ for (let i = 0; i < items.length; i += 1) {
     status,
   });
   // Stop after first successful download (used by Hermes bot for one-at-a-time posting)
-  if (i + 1 >= options.limit) {
+  actionableCount += 1;
+  if (actionableCount >= options.limit) {
     console.log(`Reached limit of ${options.limit}, stopping.`);
     break;
   }
