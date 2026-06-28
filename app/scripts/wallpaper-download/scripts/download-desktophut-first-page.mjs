@@ -220,7 +220,7 @@ function runCurlCapture(args, label) {
   return new Promise((resolve, reject) => {
     const stdout = [];
     const stderr = [];
-    const child = spawn("curl", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn("curl", args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     const timer = setTimeout(() => {
       child.kill();
       reject(new Error(`${label} timed out after ${CURL_PROCESS_TIMEOUT_MS / 1000}s`));
@@ -358,7 +358,7 @@ async function getDownloadInfo(videoUrl, referer) {
 
 function runCurl(args) {
   return new Promise((resolve, reject) => {
-    const child = spawn("curl", args, { stdio: ["ignore", "inherit", "inherit"] });
+    const child = spawn("curl", args, { stdio: ["ignore", "inherit", "inherit"], windowsHide: true });
     child.on("error", reject);
     child.on("exit", (code) => {
       if (code === 0) resolve();

@@ -1,4 +1,6 @@
 import { execFile } from 'child_process'
+import fs from 'fs'
+import path from 'path'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
@@ -16,16 +18,43 @@ const execFileOptions = {
   shell: false as const
 }
 
+function resolveToolCommand(toolName: 'ffmpeg' | 'ffprobe'): string {
+  const executable = process.platform === 'win32' ? `${toolName}.exe` : toolName
+  if (process.platform !== 'win32') {
+    return executable
+  }
+
+  const managedPath = process.env.APPDATA
+    ? path.join(process.env.APPDATA, 'wallpaper-studio', 'tools', 'ffmpeg', 'bin', executable)
+    : ''
+  if (managedPath && fs.existsSync(managedPath)) {
+    return managedPath
+  }
+
+  return executable
+}
+
+export function resolveFfmpegCommand(): string {
+  return resolveToolCommand('ffmpeg')
+}
+
+export function resolveFfprobeCommand(): string {
+  return resolveToolCommand('ffprobe')
+}
+
 export async function detectFfmpeg(): Promise<FfmpegProbeResult> {
+  const ffmpeg = resolveFfmpegCommand()
+  const ffprobe = resolveFfprobeCommand()
+
   try {
-    const { stdout } = await execFileAsync('ffmpeg', ['-version'], {
+    const { stdout } = await execFileAsync(ffmpeg, ['-version'], {
       ...execFileOptions,
       timeout: 8000
     })
     const firstLine = stdout.split('\n').find(Boolean) ?? stdout.trim()
 
     try {
-      await execFileAsync('ffprobe', ['-version'], {
+      await execFileAsync(ffprobe, ['-version'], {
         ...execFileOptions,
         timeout: 8000
       })
@@ -63,7 +92,7 @@ export async function detectFfmpegForSetup(): Promise<{
 
 export async function probeMediaDuration(filePath: string): Promise<number> {
   const { stdout } = await execFileAsync(
-    'ffprobe',
+    resolveFfprobeCommand(),
     [
       '-v',
       'error',
@@ -88,7 +117,7 @@ export async function probeMediaDuration(filePath: string): Promise<number> {
 export async function probeMediaHasAudio(filePath: string): Promise<boolean> {
   try {
     const { stdout } = await execFileAsync(
-      'ffprobe',
+      resolveFfprobeCommand(),
       [
         '-v',
         'error',

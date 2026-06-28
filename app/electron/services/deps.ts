@@ -6,6 +6,7 @@ import type { AppConfig, DepCheckResult } from '../../src/types'
 import { getManagedBdpanPath, resolveBdpanPath } from './bdpanRuntime'
 import { detectEmbeddedNode } from './nodeRuntime'
 import { detectFfmpeg } from './ffmpegRuntime'
+import { detectPython } from './pythonRuntime'
 
 const execFileAsync = promisify(execFile)
 
@@ -37,7 +38,7 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
     ? { ok: true, version: nodeRuntime.version ?? nodeRuntime.message }
     : { ok: false, message: nodeRuntime.message }
   const curl = await runCommand('curl', ['--version'])
-  const python = await runCommand('python', ['--version'])
+  const python = await detectPython()
   const ffmpeg = await detectFfmpeg()
   const bdpanPath = resolveBdpanPath(config)
   const bdpanInstalled = bdpanPath === 'bdpan' || fs.existsSync(bdpanPath)
@@ -66,8 +67,8 @@ export async function checkDeps(config: AppConfig): Promise<DepCheckResult> {
       ? { ok: true }
       : { ok: false, message: '未找到 curl，Windows 10+ 通常自带 curl.exe' },
     python: python.ok
-      ? { ok: true, version: python.stdout }
-      : { ok: false, message: '未找到 Python，请安装 Python 3.10+' },
+      ? { ok: true, version: python.version ?? python.message }
+      : { ok: false, message: python.message },
     bdpan: !bdpanInstalled
       ? { ok: false, message: `未安装 bdpan，请在「账号与工具」页点击「安装 bdpan」（将安装到 ${getManagedBdpanPath()}）` }
       : bdpan.ok && `${bdpan.stdout}\n${bdpan.stderr}`.includes('已登录')

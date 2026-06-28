@@ -3,13 +3,15 @@ import {
   buildBilibiliTitleWithLimit,
   buildTitle,
   extractChineseWallpaperName,
-  normalizeWallpaperName
+  normalizeWallpaperName,
+  translateToChinese
 } from '../title'
 
 describe('normalizeWallpaperName', () => {
   it('strips file extension and Live Wallpaper suffix', () => {
     expect(normalizeWallpaperName('Ocean Waves.mp4')).toBe('Ocean Waves')
     expect(normalizeWallpaperName('Sunset Live Wallpaper')).toBe('Sunset')
+    expect(normalizeWallpaperName('Ocean Waves 动态壁纸')).toBe('Ocean Waves')
   })
 })
 
@@ -18,8 +20,20 @@ describe('buildTitle', () => {
     expect(buildTitle('Ocean Waves', '海洋波浪')).toBe('海洋波浪 · Ocean Waves')
   })
 
-  it('adds dynamic wallpaper suffix when no translation', () => {
-    expect(buildTitle('Ocean Waves', 'Ocean Waves')).toBe('Ocean Waves 动态壁纸')
+  it('does not append dynamic wallpaper suffix when no translation', () => {
+    expect(buildTitle('Ocean Waves', 'Ocean Waves')).toBe('Ocean Waves')
+  })
+
+  it('strips dynamic wallpaper suffix from translated names', () => {
+    expect(buildTitle('Ocean Waves', '海洋波浪 动态壁纸')).toBe('海洋波浪 · Ocean Waves')
+  })
+})
+
+describe('translateToChinese', () => {
+  it('uses a local fallback for common wallpaper titles', async () => {
+    await expect(translateToChinese('Rick And Morty Green Portal')).resolves.toBe(
+      '瑞克和莫蒂绿色传送门'
+    )
   })
 })
 

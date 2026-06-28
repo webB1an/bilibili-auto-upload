@@ -106,7 +106,7 @@ export async function checkNextPublishPreview(config: AppConfig): Promise<{
     return { ok: false, duplicate: false, message: '暂无新壁纸可预览（各源 dry-run 无候选）' }
   }
 
-  const chinese = await translateToChinese(peek.name)
+  const chinese = await translateToChinese(peek.name, config.translation)
   const resourceTitle = buildTitle(peek.name, chinese)
   const duplicateResult = await findCatalogDuplicate(resourceTitle, { keyword: peek.name })
 

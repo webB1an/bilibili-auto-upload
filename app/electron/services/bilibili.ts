@@ -3,10 +3,11 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import type { AppConfig } from '../../src/types'
+import { resolvePythonCommand } from './pythonRuntime'
 import { registerProcess } from './processRegistry'
 
 function resolvePython(): string {
-  return process.platform === 'win32' ? 'python' : 'python3'
+  return resolvePythonCommand()
 }
 
 function resolveBiliCli(config: AppConfig): string {

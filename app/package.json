@@ -43,9 +43,14 @@
       "output": "release"
     },
     "files": [
-      "out/**/*",
-      "scripts/**/*",
-      "bundled/**/*"
+      {
+        "from": "out",
+        "to": "out",
+        "filter": [
+          "**/*"
+        ]
+      },
+      "package.json"
     ],
     "extraResources": [
       {

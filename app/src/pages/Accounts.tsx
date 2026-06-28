@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/Card'
 import { useAccountStatus } from '@/hooks/useAccountStatus'
 import { useBootstrap } from '@/hooks/usePipeline'
 import { useAppStore } from '@/store/appStore'
-import { BilibiliLoginPanel } from '@/components/BilibiliLoginPanel'
 import { useConfigRefresh } from '@/hooks/useConfigRefresh'
 import { getBridgeErrorMessage, getWallpaperStudio } from '@/lib/bridge'
 
@@ -81,13 +80,8 @@ export function Accounts(): React.JSX.Element {
               detail={bilibiliAccount?.message}
             />
             <p className="text-sm text-white/45">
-              推荐使用「应用内登录」扫码；也可打开终端或使用 qrcode.png。
+              B 站登录需要真实终端。点击「打开终端登录」后扫码，完成后回到本页检测状态。
             </p>
-            <BilibiliLoginPanel
-              onSuccess={() => {
-                void refreshBilibili()
-              }}
-            />
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
                 disabled={installingBilibiliCli}

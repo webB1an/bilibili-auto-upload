@@ -6,6 +6,8 @@ export const STORED_TOKEN_PLACEHOLDER = '__stored__'
 
 interface SecretsFile {
   apiToken?: string
+  minimaxApiKey?: string
+  deepseekApiKey?: string
 }
 
 function getSecretsPath(): string {
@@ -30,8 +32,8 @@ function writeSecretsFile(data: SecretsFile): void {
   fs.writeFileSync(secretsPath, JSON.stringify(data, null, 2), 'utf-8')
 }
 
-export function readStoredApiToken(): string {
-  const encrypted = readSecretsFile().apiToken
+function readStoredSecret(key: keyof SecretsFile): string {
+  const encrypted = readSecretsFile()[key]
   if (!encrypted) return ''
 
   if (!safeStorage.isEncryptionAvailable()) {
@@ -46,36 +48,73 @@ export function readStoredApiToken(): string {
 }
 
 export function writeStoredApiToken(token: string): void {
+  writeStoredSecret('apiToken', token)
+}
+
+function writeStoredSecret(key: keyof SecretsFile, token: string): void {
   const trimmed = token.trim()
+  const current = readSecretsFile()
   if (!trimmed) {
-    writeSecretsFile({})
+    delete current[key]
+    writeSecretsFile(current)
     return
   }
 
   if (!safeStorage.isEncryptionAvailable()) {
-    writeSecretsFile({ apiToken: trimmed })
+    writeSecretsFile({ ...current, [key]: trimmed })
     return
   }
 
   const encrypted = safeStorage.encryptString(trimmed).toString('base64')
-  writeSecretsFile({ apiToken: encrypted })
+  writeSecretsFile({ ...current, [key]: encrypted })
+}
+
+export function readStoredApiToken(): string {
+  return readStoredSecret('apiToken')
+}
+
+export function readStoredMinimaxApiKey(): string {
+  return readStoredSecret('minimaxApiKey')
+}
+
+export function readStoredDeepseekApiKey(): string {
+  return readStoredSecret('deepseekApiKey')
+}
+
+export function writeStoredMinimaxApiKey(token: string): void {
+  writeStoredSecret('minimaxApiKey', token)
+}
+
+export function writeStoredDeepseekApiKey(token: string): void {
+  writeStoredSecret('deepseekApiKey', token)
 }
 
 export function migratePlaintextApiToken(plainToken: string): boolean {
+  return migratePlaintextSecret(plainToken, writeStoredApiToken)
+}
+
+export function migratePlaintextSecret(
+  plainToken: string,
+  writeStored: (token: string) => void
+): boolean {
   const trimmed = plainToken.trim()
   if (!trimmed || trimmed === STORED_TOKEN_PLACEHOLDER) {
     return false
   }
-  writeStoredApiToken(trimmed)
+  writeStored(trimmed)
   return true
 }
 
 export function resolveApiTokenForRead(configToken: string): string {
+  return resolveSecretForRead(configToken, readStoredApiToken)
+}
+
+export function resolveSecretForRead(configToken: string, readStored: () => string): string {
   const fromConfig = configToken?.trim() ?? ''
   if (fromConfig && fromConfig !== STORED_TOKEN_PLACEHOLDER) {
     return fromConfig
   }
-  return readStoredApiToken()
+  return readStored()
 }
 
 export function prepareApiTokenForSave(nextToken: string, previousToken: string): string {
@@ -91,6 +130,29 @@ export function prepareApiTokenForSave(nextToken: string, previousToken: string)
 
   if (trimmed !== previousToken.trim()) {
     writeStoredApiToken(trimmed)
+  }
+
+  return STORED_TOKEN_PLACEHOLDER
+}
+
+export function prepareSecretForSave(
+  nextToken: string,
+  previousToken: string,
+  readStored: () => string,
+  writeStored: (token: string) => void
+): string {
+  const trimmed = nextToken.trim()
+  if (!trimmed) {
+    writeStored('')
+    return ''
+  }
+
+  if (trimmed === STORED_TOKEN_PLACEHOLDER) {
+    return readStored() ? STORED_TOKEN_PLACEHOLDER : ''
+  }
+
+  if (trimmed !== previousToken.trim()) {
+    writeStored(trimmed)
   }
 
   return STORED_TOKEN_PLACEHOLDER

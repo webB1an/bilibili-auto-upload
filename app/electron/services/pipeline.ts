@@ -123,7 +123,7 @@ export async function runPipeline(window: BrowserWindow | null): Promise<{
       progress('download', 'success', 100, `下载完成: ${downloaded.name}`)
 
       progress('translate', 'running', 10, '正在生成标题...')
-      const chinese = await translateToChinese(downloaded.name)
+      const chinese = await translateToChinese(downloaded.name, config.translation)
       resourceTitle = buildTitle(downloaded.name, chinese)
       bilibiliTitle = buildBilibiliTitleWithLimit(resourceTitle, { chineseName: chinese })
       setPreview(bilibiliTitle, downloaded.filePath)

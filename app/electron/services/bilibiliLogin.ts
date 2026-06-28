@@ -2,11 +2,12 @@ import { spawn, type ChildProcess } from 'child_process'
 import fs from 'fs'
 import type { AppConfig } from '../../src/types'
 import { bilibiliCheck, ensureSauEnvironment, getQrcodePath } from './bilibili'
+import { resolvePythonCommand } from './pythonRuntime'
 
 let loginProcess: ChildProcess | null = null
 
 function getPython(): string {
-  return process.platform === 'win32' ? 'python' : 'python3'
+  return resolvePythonCommand()
 }
 
 export function stopBilibiliLoginProcess(): void {

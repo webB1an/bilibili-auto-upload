@@ -3,7 +3,12 @@ import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import type { AppConfig } from '../../src/types'
-import { detectFfmpeg, probeMediaDuration, probeMediaHasAudio } from './ffmpegRuntime'
+import {
+  detectFfmpeg,
+  probeMediaDuration,
+  probeMediaHasAudio,
+  resolveFfmpegCommand
+} from './ffmpegRuntime'
 import { pickBgmTrack } from './bgmLibrary'
 import { registerProcess } from './processRegistry'
 
@@ -32,7 +37,7 @@ function buildOutputPath(videoPath: string): string {
 
 function runFfmpeg(args: string[], log: (line: string) => void): Promise<{ ok: boolean; message: string }> {
   return new Promise((resolve) => {
-    const child = spawn('ffmpeg', args, {
+    const child = spawn(resolveFfmpegCommand(), args, {
       windowsHide: true,
       shell: false
     })

@@ -36,10 +36,11 @@ export function Onboarding(): React.JSX.Element {
 
   const saveWdbzk = async (): Promise<void> => {
     if (!config) return
+    const latestConfig = await getWallpaperStudio().configGet()
     const next = {
-      ...config,
+      ...latestConfig,
       panControl: {
-        ...config.panControl,
+        ...latestConfig.panControl,
         baseUrl: 'https://panapi.wdbzk.com',
         apiToken: token.trim(),
         categoryId: Number(categoryId) || 61

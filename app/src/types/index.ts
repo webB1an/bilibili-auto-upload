@@ -39,6 +39,11 @@ export interface AppConfig {
     selectionMode: 'random' | 'sequential'
     fadeSeconds: number
   }
+  translation: {
+    provider: 'google' | 'minimax' | 'deepseek'
+    minimaxApiKey: string
+    deepseekApiKey: string
+  }
 }
 
 export interface QueueRuntimeState {

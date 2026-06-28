@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type DragEvent, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ReadOnlyPath } from '@/components/ReadOnlyPath'
@@ -9,6 +9,29 @@ import { useAppStore } from '@/store/appStore'
 import type { AppConfig, UpdateStatus } from '@/types'
 import { getWallpaperStudio } from '@/lib/bridge'
 
+function moveSource(sources: string[], sourceId: string, targetId: string): string[] {
+  if (sourceId === targetId) return sources
+  const fromIndex = sources.indexOf(sourceId)
+  const toIndex = sources.indexOf(targetId)
+  if (fromIndex < 0 || toIndex < 0) return sources
+
+  const next = [...sources]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
+}
+
+function nudgeSource(sources: string[], sourceId: string, direction: -1 | 1): string[] {
+  const index = sources.indexOf(sourceId)
+  const nextIndex = index + direction
+  if (index < 0 || nextIndex < 0 || nextIndex >= sources.length) return sources
+
+  const next = [...sources]
+  const [moved] = next.splice(index, 1)
+  next.splice(nextIndex, 0, moved)
+  return next
+}
+
 export function Settings(): React.JSX.Element {
   useBootstrap()
   const { config, setConfig } = useAppStore()
@@ -16,6 +39,7 @@ export function Settings(): React.JSX.Element {
   const [saved, setSaved] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null)
+  const [draggingSource, setDraggingSource] = useState<string | null>(null)
 
   useEffect(() => {
     if (config) setDraft(config)
@@ -35,6 +59,17 @@ export function Settings(): React.JSX.Element {
   const update = (patch: Partial<AppConfig>): void => {
     setDraft({ ...draft, ...patch })
     setSaved(false)
+  }
+
+  const updateDownloadSources = (sources: string[]): void => {
+    update({ download: { ...draft.download, sources } })
+  }
+
+  const handleSourceDrop = (event: DragEvent<HTMLDivElement>, targetId: string): void => {
+    event.preventDefault()
+    if (!draggingSource) return
+    updateDownloadSources(moveSource(draft.download.sources, draggingSource, targetId))
+    setDraggingSource(null)
   }
 
   return (
@@ -153,7 +188,7 @@ export function Settings(): React.JSX.Element {
               type="number"
               value={draft.bilibili.tid}
               onChange={(e) =>
-                update({ bilibili: { ...draft.bilibili, tid: Number(e.target.value) || 138 } })
+                update({ bilibili: { ...draft.bilibili, tid: Number(e.target.value) || 21 } })
               }
             />
             <Input
@@ -239,50 +274,155 @@ export function Settings(): React.JSX.Element {
           </div>
         </Card>
 
+        <Card title="标题翻译">
+          <div className="space-y-4">
+            <p className="text-sm text-white/45">
+              MiniMax 和 DeepSeek 单选启用；都不选时使用原有 Google 翻译。
+            </p>
+            <div className="flex flex-wrap gap-4 text-sm text-white/75">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={draft.translation.provider === 'minimax'}
+                  onChange={(e) =>
+                    update({
+                      translation: {
+                        ...draft.translation,
+                        provider: e.target.checked ? 'minimax' : 'google'
+                      }
+                    })
+                  }
+                />
+                MiniMax
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={draft.translation.provider === 'deepseek'}
+                  onChange={(e) =>
+                    update({
+                      translation: {
+                        ...draft.translation,
+                        provider: e.target.checked ? 'deepseek' : 'google'
+                      }
+                    })
+                  }
+                />
+                DeepSeek
+              </label>
+            </div>
+            <Input
+              label="MiniMax API Key"
+              type="password"
+              value={draft.translation.minimaxApiKey}
+              onChange={(e) =>
+                update({
+                  translation: { ...draft.translation, minimaxApiKey: e.target.value }
+                })
+              }
+              placeholder="未填写时无法使用 MiniMax"
+            />
+            <Input
+              label="DeepSeek API Key"
+              type="password"
+              value={draft.translation.deepseekApiKey}
+              onChange={(e) =>
+                update({
+                  translation: { ...draft.translation, deepseekApiKey: e.target.value }
+                })
+              }
+              placeholder="未填写时无法使用 DeepSeek"
+            />
+            <p className="text-xs text-white/40">
+              API Key 会保存到本机安全存储；配置文件中只保留占位符。
+            </p>
+          </div>
+        </Card>
+
         <Card title="流水线">
           <div className="space-y-4">
             <div>
-              <p className="mb-3 text-sm text-white/70">壁纸源（勾选启用）</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {WALLPAPER_SOURCES.map((source) => {
+              <p className="mb-3 text-sm text-white/70">壁纸源（拖拽调整优先级）</p>
+              <div className="space-y-2">
+                {draft.download.sources.map((sourceId, index) => {
+                  const source = WALLPAPER_SOURCES.find((item) => item.id === sourceId)
+                  if (!source) return null
                   const enabled = draft.download.sources.includes(source.id)
                   const onlyEnabled = enabled && draft.download.sources.length === 1
 
                   return (
-                    <label
+                    <div
                       key={source.id}
-                      className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                        enabled
-                          ? 'border-accent/40 bg-accent/10 text-white'
-                          : 'border-white/10 bg-white/5 text-white/55'
-                      } ${onlyEnabled ? 'cursor-not-allowed opacity-80' : 'cursor-pointer hover:border-white/20'}`}
+                      draggable
+                      onDragStart={() => setDraggingSource(source.id)}
+                      onDragEnd={() => setDraggingSource(null)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => handleSourceDrop(event, source.id)}
+                      className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm text-white transition-colors ${
+                        draggingSource === source.id
+                          ? 'border-accent/70 bg-accent/20'
+                          : 'border-accent/40 bg-accent/10 hover:border-accent/70'
+                      }`}
                       title={onlyEnabled ? '至少保留一个壁纸源' : undefined}
                     >
+                      <span className="cursor-grab select-none text-white/40" aria-hidden="true">
+                        ::
+                      </span>
+                      <span className="w-6 text-xs tabular-nums text-white/35">{index + 1}</span>
                       <input
                         type="checkbox"
                         checked={enabled}
                         disabled={onlyEnabled}
                         onChange={(e) =>
-                          update({
-                            download: {
-                              ...draft.download,
-                              sources: toggleWallpaperSource(
-                                draft.download.sources,
-                                source.id,
-                                e.target.checked
-                              )
-                            }
-                          })
+                          updateDownloadSources(
+                            toggleWallpaperSource(draft.download.sources, source.id, e.target.checked)
+                          )
+                        }
+                      />
+                      <span>{source.label}</span>
+                      <span className="ml-auto text-xs text-white/35">{source.id}</span>
+                      <Button
+                        variant="secondary"
+                        disabled={index === 0}
+                        onClick={() => updateDownloadSources(nudgeSource(draft.download.sources, source.id, -1))}
+                      >
+                        上移
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={index === draft.download.sources.length - 1}
+                        onClick={() => updateDownloadSources(nudgeSource(draft.download.sources, source.id, 1))}
+                      >
+                        下移
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {WALLPAPER_SOURCES.filter((source) => !draft.download.sources.includes(source.id)).map(
+                  (source) => (
+                    <label
+                      key={source.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/55 transition-colors hover:border-white/20"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={(e) =>
+                          updateDownloadSources(
+                            toggleWallpaperSource(draft.download.sources, source.id, e.target.checked)
+                          )
                         }
                       />
                       <span>{source.label}</span>
                       <span className="ml-auto text-xs text-white/35">{source.id}</span>
                     </label>
                   )
-                })}
+                )}
               </div>
               <p className="mt-3 text-xs text-white/40">
-                流水线会按上表顺序依次尝试已启用的源；取消勾选后该源不会被下载。
+                流水线会按已启用列表从上到下依次尝试；取消勾选后该源不会被下载。
               </p>
             </div>
             <label className="flex items-center gap-3 text-sm text-white/70">

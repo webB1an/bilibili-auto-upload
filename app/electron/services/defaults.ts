@@ -6,6 +6,7 @@ import { orderWallpaperSources, WALLPAPER_SOURCE_IDS } from '../../src/constants
 export const DEFAULT_DOWNLOAD_SOURCES = WALLPAPER_SOURCE_IDS
 
 const LEGACY_DOWNLOAD_SOURCES = ['wallpaperwaifu', 'moewalls'] as const
+const LEGACY_BILIBILI_TID = 138
 
 /** Expand old 2-source installs once; checkbox UI lets users disable sources afterward. */
 export function migrateLegacyDownloadSources(sources: string[] | undefined): string[] | null {
@@ -16,7 +17,7 @@ export function migrateLegacyDownloadSources(sources: string[] | undefined): str
   return null
 }
 
-/** Keep only known sources in default catalog order. */
+/** Keep only known sources while preserving the user's priority order. */
 export function normalizeDownloadSources(
   sources: string[] | undefined,
   defaults: readonly string[] = DEFAULT_DOWNLOAD_SOURCES
@@ -33,21 +34,21 @@ export function getDefaultConfig(): AppConfig {
       categoryId: 61
     },
     baidu: {
-      remoteBase: '动态壁纸',
+      remoteBase: '动态壁纸-自动分享',
       sharePeriodDays: 0,
       bdpanPath: path.join(app.getPath('userData'), 'tools', 'bdpan', process.platform === 'win32' ? 'bdpan.exe' : 'bdpan')
     },
     bilibili: {
-      accountName: 'creator',
-      tid: 138,
-      tags: ['动态壁纸', 'Wallpaper Engine', '4K'],
+      accountName: 'Wallpaper壁纸姐',
+      tid: 21,
+      tags: ['动态壁纸', 'Wallpaper Engine', '4K', '二次元', '壁纸', '动漫壁纸', '视频壁纸'],
       socialAutoUploadPath: path.join(app.getPath('userData'), 'tools', 'bilibili-cli'),
-      descTemplate: `{bilibiliTitle}
-
-网盘下载：{shareLink}
-{sharePwdLine}
-
-来源：{detailUrl}`
+      descTemplate: `动态壁纸及手机、平板、电脑使用教程
+https://wallpaper.wdbzk.com/
+-----------------------------------------------------
+动态壁纸来自Wallpaper Engine
+尊重每一张壁纸的原创作者
+如有侵权，联系删除`
     },
     download: {
       sources: [...DEFAULT_DOWNLOAD_SOURCES],
@@ -68,9 +69,14 @@ export function getDefaultConfig(): AppConfig {
       stopOnError: true
     },
     bgm: {
-      libraryPath: '',
+      libraryPath: 'C:\\Users\\Admin\\Desktop\\bgm',
       selectionMode: 'random',
       fadeSeconds: 2
+    },
+    translation: {
+      provider: 'minimax',
+      minimaxApiKey: '',
+      deepseekApiKey: ''
     }
   }
 }
@@ -80,11 +86,15 @@ export function mergeConfig(partial: Partial<AppConfig>, defaults: AppConfig): A
   const downloadPartial = legacySources
     ? { ...partial.download, sources: legacySources }
     : partial.download
+  const bilibiliPartial =
+    partial.bilibili?.tid === LEGACY_BILIBILI_TID
+      ? { ...partial.bilibili, tid: defaults.bilibili.tid }
+      : partial.bilibili
 
   return {
     panControl: { ...defaults.panControl, ...partial.panControl },
     baidu: { ...defaults.baidu, ...partial.baidu },
-    bilibili: { ...defaults.bilibili, ...partial.bilibili },
+    bilibili: { ...defaults.bilibili, ...bilibiliPartial },
     download: {
       ...defaults.download,
       ...downloadPartial,
@@ -93,6 +103,7 @@ export function mergeConfig(partial: Partial<AppConfig>, defaults: AppConfig): A
     pipeline: { ...defaults.pipeline, ...partial.pipeline },
     onboarding: { ...defaults.onboarding, ...partial.onboarding },
     queue: { ...defaults.queue, ...partial.queue },
-    bgm: { ...defaults.bgm, ...partial.bgm }
+    bgm: { ...defaults.bgm, ...partial.bgm },
+    translation: { ...defaults.translation, ...partial.translation }
   }
 }

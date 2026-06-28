@@ -1,11 +1,36 @@
 import { spawn } from 'child_process'
+import fs from 'fs'
+import path from 'path'
 
 export const PYTHON_DOWNLOAD_URL = 'https://www.python.org/downloads/'
 const MIN_PYTHON_MAJOR = 3
 const MIN_PYTHON_MINOR = 10
 
 export function resolvePythonCommand(): string {
-  return process.platform === 'win32' ? 'python' : 'python3'
+  if (process.platform !== 'win32') {
+    return 'python3'
+  }
+
+  const knownRoots = [
+    process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'Programs', 'Python') : '',
+    process.env.ProgramFiles || '',
+    process.env['ProgramFiles(x86)'] || ''
+  ].filter(Boolean)
+
+  const candidates = knownRoots.flatMap((root) => {
+    if (!fs.existsSync(root)) return []
+    try {
+      return fs
+        .readdirSync(root, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory() && /^Python\d+$/i.test(entry.name))
+        .map((entry) => path.join(root, entry.name, 'python.exe'))
+    } catch {
+      return []
+    }
+  })
+
+  candidates.sort((left, right) => right.localeCompare(left, undefined, { numeric: true }))
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? 'python'
 }
 
 export function runProcess(

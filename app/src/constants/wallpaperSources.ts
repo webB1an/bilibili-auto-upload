@@ -15,8 +15,12 @@ export function orderWallpaperSources(
   sources: string[],
   catalog: readonly string[] = WALLPAPER_SOURCE_IDS
 ): string[] {
-  const enabled = new Set(sources.filter((source) => catalog.includes(source)))
-  return catalog.filter((id) => enabled.has(id))
+  const seen = new Set<string>()
+  return sources.filter((source) => {
+    if (!catalog.includes(source) || seen.has(source)) return false
+    seen.add(source)
+    return true
+  })
 }
 
 export function toggleWallpaperSource(
