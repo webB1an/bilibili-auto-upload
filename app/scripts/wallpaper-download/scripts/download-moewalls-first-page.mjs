@@ -464,9 +464,11 @@ console.log(`Selected page: ${options.page}`);
 console.log(`Listing URL: ${pageUrl}`);
 if (options.dryRun) console.log("Dry run: downloads will be skipped.");
 
+console.log("Fetching listing page...");
 const home = await fetchText(pageUrl);
 const items = parsePageItems(home);
 if (!items.length) throw new Error(`No wallpaper items found on page ${options.page}.`);
+console.log(`Found ${items.length} wallpapers on listing page.`);
 
 const urlRecords = await loadUrlRecords();
 const results = [];
@@ -487,6 +489,7 @@ for (let i = 0; i < items.length; i += 1) {
     continue;
   }
 
+  console.log(`[${i + 1}/${items.length}] fetching detail: ${item.pageTitle}`);
   const detailHtml = await fetchText(item.detailUrl);
   const detail = parseDetail(detailHtml);
   let name = detail.fallbackTitle || item.pageTitle;
@@ -494,6 +497,7 @@ for (let i = 0; i < items.length; i += 1) {
 
   if (detail.steamUrl?.startsWith("https://steamcommunity.com/")) {
     try {
+      console.log(`[${i + 1}/${items.length}] fetching Steam title...`);
       const steamHtml = await fetchText(detail.steamUrl);
       const steamTitle = parseSteamTitle(steamHtml);
       if (steamTitle) {
